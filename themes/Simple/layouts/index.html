@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ .Site.Title }}</title>
+</head>
+<body>
+    <header>
+        <h1>{{ .Site.Title }}</h1>
+    </header>
+    <main>
+        <section>
+            <h2>{{ .Site.Params.homeInfoParams.Title }}</h2>
+            <p>{{ .Site.Params.homeInfoParams.Content }}</p>
+        </section>
+
+        <section>
+            <h2>最新文章</h2>
+            {{ range (where .Site.RegularPages "Type" "in" .Site.Params.mainSections) }}
+            <article>
+                <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
+                <time>{{ .Date.Format "2006-01-02" }}</time>
+                <p>{{ .Summary }}</p>
+            </article>
+            {{ end }}
+        </section>
+    </main>
+    <footer>
+        <p>&copy; {{ now.Format "2006" }} {{ .Site.Params.author }}</p>
+    </footer>
+</body>
+</html> 

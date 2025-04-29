@@ -1,13 +1,13 @@
 baseURL = 'http://localhost:1313/'
 languageCode = 'zh-cn'
 title = '技术博客'
-theme = 'PaperMod'
+theme = 'Simple'
 
 [params]
   # 网站描述
   description = "我的技术博客"
   # 作者信息
-  author = "Your Name"
+  author = "刘晋勋"
   # 默认图片
   defaultTheme = "auto"
   # 显示阅读时间
