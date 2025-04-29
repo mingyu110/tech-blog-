@@ -1,27 +1,307 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{{ .Title }} - {{ .Site.Title }}</title>
-</head>
-<body>
-    <header>
-        <h1>{{ .Site.Title }}</h1>
-        <nav>
-            <a href="{{ .Site.BaseURL }}">首页</a>
-        </nav>
-    </header>
-    <main>
-        <article>
-            <h1>{{ .Title }}</h1>
-            <time>{{ .Date.Format "2006-01-02" }}</time>
-            <div>
-                {{ .Content }}
+{{ define "main" }}
+<article class="post">
+    <header class="post-header">
+        <h1 class="post-title">{{ .Title }}</h1>
+        <div class="post-meta">
+            <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+                {{ .Date.Format "January 2, 2006" }}
+            </time>
+            {{ if .Params.author }}
+            <span class="post-author">by {{ .Params.author }}</span>
+            {{ end }}
+            {{ if .Params.categories }}
+            <div class="post-categories">
+                {{ range .Params.categories }}
+                {{ $categoryURL := printf "/categories/%s/" . | urlize }}
+                <a href="{{ $categoryURL }}" class="post-category">{{ humanize . }}</a>
+                {{ end }}
             </div>
-        </article>
-    </main>
-    <footer>
-        <p>&copy; {{ now.Format "2006" }} {{ .Site.Params.author }}</p>
-    </footer>
-</body>
-</html> 
+            {{ end }}
+        </div>
+    </header>
+
+    {{ if .Params.image }}
+    <div class="post-featured-image">
+        <img src="{{ .Params.image }}" alt="{{ .Title }}">
+    </div>
+    {{ end }}
+
+    <div class="post-content">
+        {{ .Content }}
+    </div>
+
+    {{ if .Params.tags }}
+    <div class="post-tags">
+        <span class="tags-title">Tags:</span>
+        <div class="tags-list">
+            {{ range .Params.tags }}
+            {{ $tagURL := printf "/tags/%s/" . | urlize }}
+            <a href="{{ $tagURL }}" class="post-tag">{{ humanize . }}</a>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    <div class="post-navigation">
+        <div class="post-nav-item post-nav-prev">
+            {{ if .PrevInSection }}
+            <span class="post-nav-label">Previous</span>
+            <a href="{{ .PrevInSection.Permalink }}">{{ .PrevInSection.Title }}</a>
+            {{ end }}
+        </div>
+        <div class="post-nav-item post-nav-next">
+            {{ if .NextInSection }}
+            <span class="post-nav-label">Next</span>
+            <a href="{{ .NextInSection.Permalink }}">{{ .NextInSection.Title }}</a>
+            {{ end }}
+        </div>
+    </div>
+
+    {{ if .Site.Params.comments }}
+    <div class="post-comments">
+        <h3 class="comments-title">Comments</h3>
+        <div id="comments">
+            <!-- Comment system will go here -->
+            <!-- You can implement Disqus, Commento, or another system -->
+            <p class="comments-placeholder">Comments are currently disabled. Please check back later.</p>
+        </div>
+    </div>
+    {{ end }}
+</article>
+
+<style>
+    .post {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+
+    .post-header {
+        margin-bottom: 2rem;
+    }
+
+    .post-title {
+        font-size: 2.5rem;
+        line-height: 1.2;
+        margin-bottom: 1rem;
+        font-weight: 800;
+    }
+
+    .post-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.95rem;
+        color: var(--text-color);
+        opacity: 0.7;
+        margin-bottom: 1rem;
+    }
+
+    .post-author {
+        font-style: italic;
+    }
+
+    .post-categories {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .post-category {
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .post-featured-image {
+        margin-bottom: 2rem;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .post-featured-image img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .post-content {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        margin-bottom: 3rem;
+    }
+
+    .post-content p {
+        margin-bottom: 1.5rem;
+    }
+
+    .post-content h2 {
+        font-size: 1.8rem;
+        margin: 2.5rem 0 1rem;
+    }
+
+    .post-content h3 {
+        font-size: 1.5rem;
+        margin: 2rem 0 1rem;
+    }
+
+    .post-content ul, .post-content ol {
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem;
+    }
+
+    .post-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .post-content blockquote {
+        margin: 2rem 0;
+        padding: 1rem 1.5rem;
+        border-left: 4px solid var(--primary-color);
+        background-color: var(--secondary-background);
+        font-style: italic;
+    }
+
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 1.5rem 0;
+    }
+
+    .post-content pre {
+        background-color: var(--code-background);
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 1.5rem 0;
+    }
+
+    .post-content code {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.9rem;
+        padding: 0.1rem 0.3rem;
+        background-color: var(--code-background);
+        border-radius: 3px;
+    }
+
+    .post-content pre code {
+        padding: 0;
+        background-color: transparent;
+    }
+
+    .post-tags {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 3rem;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.5rem 0;
+    }
+
+    .tags-title {
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+
+    .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .post-tag {
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        background-color: var(--secondary-background);
+        border: 1px solid var(--border-color);
+        font-size: 0.8rem;
+        transition: background-color 0.2s;
+    }
+
+    .post-tag:hover {
+        background-color: var(--border-color);
+    }
+
+    .post-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin: 3rem 0;
+    }
+
+    .post-nav-item {
+        max-width: 45%;
+    }
+
+    .post-nav-label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.7;
+    }
+
+    .post-nav-prev {
+        text-align: left;
+    }
+
+    .post-nav-next {
+        text-align: right;
+    }
+
+    .post-comments {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .comments-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .comments-placeholder {
+        text-align: center;
+        padding: 2rem;
+        background-color: var(--secondary-background);
+        border-radius: 8px;
+        font-style: italic;
+        opacity: 0.8;
+    }
+
+    @media (max-width: 768px) {
+        .post {
+            padding: 1rem;
+        }
+
+        .post-title {
+            font-size: 2rem;
+        }
+
+        .post-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .post-content {
+            font-size: 1rem;
+        }
+
+        .post-navigation {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .post-nav-item {
+            max-width: 100%;
+        }
+    }
+</style>
+{{ end }} 

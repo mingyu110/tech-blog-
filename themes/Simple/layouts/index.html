@@ -1,32 +1,490 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{{ .Site.Title }}</title>
-</head>
-<body>
-    <header>
-        <h1>{{ .Site.Title }}</h1>
-    </header>
-    <main>
-        <section>
-            <h2>{{ .Site.Params.homeInfoParams.Title }}</h2>
-            <p>{{ .Site.Params.homeInfoParams.Content }}</p>
-        </section>
-
-        <section>
-            <h2>最新文章</h2>
-            {{ range (where .Site.RegularPages "Type" "in" .Site.Params.mainSections) }}
-            <article>
-                <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
-                <time>{{ .Date.Format "2006-01-02" }}</time>
-                <p>{{ .Summary }}</p>
-            </article>
+{{ define "main" }}
+<div class="home-container">
+    <!-- Hero section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">{{ .Site.Title }}</h1>
+            {{ with .Site.Params.description }}
+            <p class="hero-description">{{ . }}</p>
             {{ end }}
-        </section>
-    </main>
-    <footer>
-        <p>&copy; {{ now.Format "2006" }} {{ .Site.Params.author }}</p>
-    </footer>
-</body>
-</html> 
+            <div class="hero-buttons">
+                <a href="#latest-posts" class="button primary-button">最新文章</a>
+                {{ with .Site.Params.github }}
+                <a href="{{ . }}" class="button secondary-button" target="_blank" rel="noopener">GitHub</a>
+                {{ end }}
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured posts -->
+    {{ $featuredPosts := where .Site.RegularPages "Params.featured" true }}
+    {{ if gt (len $featuredPosts) 0 }}
+    <section class="featured-posts">
+        <h2 class="section-title">特色内容</h2>
+        <div class="featured-posts-grid">
+            {{ range first 3 $featuredPosts }}
+            <div class="featured-post-card">
+                <a href="{{ .Permalink }}" class="featured-post-link">
+                    {{ if .Params.image }}
+                    <div class="featured-post-image">
+                        <img src="{{ .Params.image }}" alt="{{ .Title }}">
+                    </div>
+                    {{ else }}
+                    <div class="featured-post-image featured-post-image-placeholder">
+                        <div class="placeholder-icon">✨</div>
+                    </div>
+                    {{ end }}
+                    <div class="featured-post-content">
+                        <h3 class="featured-post-title">{{ .Title }}</h3>
+                        <div class="featured-post-meta">
+                            <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+                                {{ .Date.Format "Jan 2, 2006" }}
+                            </time>
+                            {{ if .Params.categories }}
+                            <div class="featured-post-categories">
+                                {{ range first 1 .Params.categories }}
+                                <span class="category-tag">{{ humanize . }}</span>
+                                {{ end }}
+                            </div>
+                            {{ end }}
+                        </div>
+                        <div class="featured-post-excerpt">
+                            {{ if .Description }}
+                            {{ .Description }}
+                            {{ else }}
+                            {{ .Summary | truncate 150 }}
+                            {{ end }}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {{ end }}
+        </div>
+    </section>
+    {{ end }}
+
+    <!-- Latest posts -->
+    <section id="latest-posts" class="latest-posts">
+        <h2 class="section-title">最新文章</h2>
+        <div class="posts-grid">
+            {{ range first 6 (where .Site.RegularPages "Type" "posts") }}
+            <div class="post-card">
+                <a href="{{ .Permalink }}" class="post-card-link">
+                    {{ if .Params.image }}
+                    <div class="post-card-image">
+                        <img src="{{ .Params.image }}" alt="{{ .Title }}">
+                    </div>
+                    {{ else }}
+                    <div class="post-card-image post-card-image-placeholder">
+                        <div class="placeholder-icon">📄</div>
+                    </div>
+                    {{ end }}
+                    <div class="post-card-content">
+                        <h3 class="post-card-title">{{ .Title }}</h3>
+                        <div class="post-card-meta">
+                            <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+                                {{ .Date.Format "Jan 2, 2006" }}
+                            </time>
+                            {{ if .Params.categories }}
+                            <div class="post-card-categories">
+                                {{ range first 1 .Params.categories }}
+                                <span class="category-tag">{{ humanize . }}</span>
+                                {{ end }}
+                            </div>
+                            {{ end }}
+                        </div>
+                        <div class="post-card-excerpt">
+                            {{ if .Description }}
+                            {{ .Description }}
+                            {{ else }}
+                            {{ .Summary | truncate 120 }}
+                            {{ end }}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {{ end }}
+        </div>
+        <div class="view-all-container">
+            <a href="/posts" class="view-all-button">查看全部文章</a>
+        </div>
+    </section>
+
+    <!-- Categories section -->
+    <section class="categories-section">
+        <h2 class="section-title">分类</h2>
+        <div class="categories-grid">
+            {{ range first 6 .Site.Taxonomies.categories.ByCount }}
+            <a href="{{ .Page.Permalink }}" class="category-card">
+                <span class="category-name">{{ humanize .Page.Title }}</span>
+                <span class="category-count">{{ .Count }} {{ if eq .Count 1 }}post{{ else }}posts{{ end }}</span>
+            </a>
+            {{ end }}
+        </div>
+    </section>
+</div>
+
+<style>
+    .home-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+
+    /* Hero section */
+    .hero {
+        padding: 5rem 1rem;
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        margin-bottom: 1.5rem;
+        line-height: 1.2;
+    }
+
+    .hero-description {
+        font-size: 1.25rem;
+        max-width: 700px;
+        margin: 0 auto 2rem;
+        line-height: 1.5;
+        color: var(--text-color);
+        opacity: 0.8;
+    }
+
+    .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .button {
+        display: inline-block;
+        padding: 0.8rem 1.8rem;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .primary-button {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .primary-button:hover {
+        background-color: var(--primary-color-dark);
+        transform: translateY(-2px);
+    }
+
+    .secondary-button {
+        background-color: var(--secondary-background);
+        color: var(--text-color);
+    }
+
+    .secondary-button:hover {
+        background-color: var(--border-color);
+        transform: translateY(-2px);
+    }
+
+    /* Section styling */
+    .section-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    /* Featured posts */
+    .featured-posts {
+        margin-bottom: 5rem;
+    }
+
+    .featured-posts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+
+    .featured-post-card {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+        background-color: var(--card-background);
+    }
+
+    .featured-post-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .featured-post-link {
+        color: var(--text-color);
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .featured-post-image {
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+    }
+
+    .featured-post-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s;
+    }
+
+    .featured-post-card:hover .featured-post-image img {
+        transform: scale(1.1);
+    }
+
+    .featured-post-image-placeholder {
+        background-color: var(--secondary-background);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .placeholder-icon {
+        font-size: 2.5rem;
+        opacity: 0.4;
+    }
+
+    .featured-post-content {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .featured-post-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.8rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .featured-post-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+        opacity: 0.7;
+    }
+
+    .featured-post-categories {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .category-tag {
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .featured-post-excerpt {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-color);
+        opacity: 0.8;
+    }
+
+    /* Latest posts */
+    .latest-posts {
+        margin-bottom: 5rem;
+    }
+
+    .posts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .post-card {
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        background-color: var(--card-background);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        height: 100%;
+    }
+
+    .post-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .post-card-link {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        color: var(--text-color);
+        text-decoration: none;
+    }
+
+    .post-card-image {
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+    }
+
+    .post-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+
+    .post-card:hover .post-card-image img {
+        transform: scale(1.05);
+    }
+
+    .post-card-image-placeholder {
+        background-color: var(--secondary-background);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .post-card-content {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        padding: 1.5rem;
+    }
+
+    .post-card-title {
+        font-size: 1.3rem;
+        margin-bottom: 0.7rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .post-card-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+        opacity: 0.7;
+    }
+
+    .post-card-categories {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .post-card-excerpt {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        opacity: 0.8;
+        flex-grow: 1;
+    }
+
+    .view-all-container {
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .view-all-button {
+        display: inline-block;
+        padding: 0.8rem 2rem;
+        border-radius: 6px;
+        background-color: var(--secondary-background);
+        color: var(--text-color);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .view-all-button:hover {
+        background-color: var(--border-color);
+        transform: translateY(-2px);
+    }
+
+    /* Categories section */
+    .categories-section {
+        margin-bottom: 5rem;
+    }
+
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .category-card {
+        display: flex;
+        flex-direction: column;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background-color: var(--card-background);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s, box-shadow 0.3s;
+        text-decoration: none;
+        color: var(--text-color);
+    }
+
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .category-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .category-count {
+        font-size: 0.9rem;
+        opacity: 0.7;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+
+        .hero-description {
+            font-size: 1.1rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+        }
+
+        .featured-posts-grid,
+        .posts-grid,
+        .categories-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .button {
+            width: 100%;
+            max-width: 250px;
+            text-align: center;
+        }
+    }
+</style>
+{{ end }} 

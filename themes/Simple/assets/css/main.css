@@ -1,0 +1,409 @@
+:root {
+    /* Light theme colors */
+    --background-color: #ffffff;
+    --text-color: #333333;
+    --heading-color: #222222;
+    --primary-color: #3B82F6;
+    --secondary-color: #6B7280;
+    --border-color: #E5E7EB;
+    --code-background: #F9FAFB;
+    --button-hover: #F3F4F6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --tag-background: #F3F4F6;
+    --tag-color: #4B5563;
+    --blockquote-color: #6B7280;
+    --blockquote-border: #E5E7EB;
+    --selection-background: #DBEAFE;
+    --selection-color: #2563EB;
+}
+
+[data-theme="dark"] {
+    /* Dark theme colors */
+    --background-color: #1F2937;
+    --text-color: #E5E7EB;
+    --heading-color: #F9FAFB;
+    --primary-color: #60A5FA;
+    --secondary-color: #9CA3AF;
+    --border-color: #374151;
+    --code-background: #374151;
+    --button-hover: #374151;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --tag-background: #374151;
+    --tag-color: #D1D5DB;
+    --blockquote-color: #9CA3AF;
+    --blockquote-border: #4B5563;
+    --selection-background: #2563EB;
+    --selection-color: #F9FAFB;
+}
+
+/* Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    transition: color 0.3s, background-color 0.3s;
+}
+
+::selection {
+    background-color: var(--selection-background);
+    color: var(--selection-color);
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--heading-color);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 1.5rem 0 1rem;
+}
+
+h1 {
+    font-size: 2.25rem;
+}
+
+h2 {
+    font-size: 1.8rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+h5 {
+    font-size: 1.125rem;
+}
+
+h6 {
+    font-size: 1rem;
+}
+
+p {
+    margin-bottom: 1.5rem;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+strong, b {
+    font-weight: 700;
+}
+
+em, i {
+    font-style: italic;
+}
+
+/* Lists */
+ul, ol {
+    margin: 0 0 1.5rem 1.5rem;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+/* Code */
+code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    background-color: var(--code-background);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+pre {
+    background-color: var(--code-background);
+    border-radius: 4px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+pre code {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.875rem;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5rem 0;
+}
+
+figure {
+    margin: 1.5rem 0;
+}
+
+figcaption {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+/* Blockquotes */
+blockquote {
+    padding: 1rem 1.5rem;
+    border-left: 4px solid var(--blockquote-border);
+    background-color: var(--code-background);
+    color: var(--blockquote-color);
+    margin: 1.5rem 0;
+    border-radius: 0 4px 4px 0;
+}
+
+blockquote p {
+    margin-bottom: 0;
+}
+
+blockquote cite {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    font-style: italic;
+    display: block;
+    margin-top: 0.5rem;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+}
+
+th, td {
+    border: 1px solid var(--border-color);
+    padding: 0.75rem;
+    text-align: left;
+}
+
+th {
+    background-color: var(--code-background);
+    font-weight: 700;
+}
+
+/* Horizontal Rule */
+hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: 2rem 0;
+}
+
+/* Button */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: none;
+}
+
+.btn:hover {
+    background-color: var(--secondary-color);
+    text-decoration: none;
+    color: white;
+}
+
+/* Tags */
+.tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background-color: var(--tag-background);
+    color: var(--tag-color);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.tag:hover {
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+}
+
+/* Cards */
+.card {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+/* Article */
+.article {
+    margin-bottom: 3rem;
+}
+
+.article-header {
+    margin-bottom: 1.5rem;
+}
+
+.article-title {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.article-meta {
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.article-content {
+    margin-bottom: 1.5rem;
+}
+
+/* Utilities */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.mb-0 {
+    margin-bottom: 0;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+.mb-3 {
+    margin-bottom: 1.5rem;
+}
+
+.mb-4 {
+    margin-bottom: 2rem;
+}
+
+.mt-0 {
+    margin-top: 0;
+}
+
+.mt-1 {
+    margin-top: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 1rem;
+}
+
+.mt-3 {
+    margin-top: 1.5rem;
+}
+
+.mt-4 {
+    margin-top: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 960px;
+    }
+}
+
+@media (max-width: 992px) {
+    .container {
+        max-width: 720px;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.6rem;
+    }
+}
+
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+    
+    .container {
+        max-width: 540px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    h2 {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 0 1rem;
+    }
+    
+    h1 {
+        font-size: 1.6rem;
+    }
+    
+    h2 {
+        font-size: 1.3rem;
+    }
+} 

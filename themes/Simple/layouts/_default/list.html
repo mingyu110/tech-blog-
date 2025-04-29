@@ -1,28 +1,242 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{{ .Title }} - {{ .Site.Title }}</title>
-</head>
-<body>
-    <header>
-        <h1>{{ .Site.Title }}</h1>
-        <nav>
-            <a href="{{ .Site.BaseURL }}">首页</a>
-        </nav>
-    </header>
-    <main>
-        <h1>{{ .Title }}</h1>
-        {{ range .Pages }}
-        <article>
-            <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
-            <time>{{ .Date.Format "2006-01-02" }}</time>
-            <p>{{ .Summary }}</p>
-        </article>
+{{ define "main" }}
+<div class="list-container">
+    <header class="list-header">
+        <h1 class="list-title">{{ .Title }}</h1>
+        {{ if .Description }}
+        <div class="list-description">{{ .Description }}</div>
         {{ end }}
-    </main>
-    <footer>
-        <p>&copy; {{ now.Format "2006" }} {{ .Site.Params.author }}</p>
-    </footer>
-</body>
-</html> 
+    </header>
+
+    {{ if eq .Kind "taxonomy" }}
+    <div class="taxonomy-info">
+        <p>{{ len .Pages }} {{ if eq (len .Pages) 1 }}post{{ else }}posts{{ end }} in this {{ if eq .Kind "tags" }}tag{{ else }}category{{ end }}</p>
+    </div>
+    {{ end }}
+
+    <div class="posts-grid">
+        {{ range .Pages }}
+        <div class="post-card">
+            <a href="{{ .Permalink }}" class="post-card-link">
+                {{ if .Params.image }}
+                <div class="post-card-image">
+                    <img src="{{ .Params.image }}" alt="{{ .Title }}">
+                </div>
+                {{ else }}
+                <div class="post-card-image post-card-image-placeholder">
+                    <div class="placeholder-icon">📄</div>
+                </div>
+                {{ end }}
+                <div class="post-card-content">
+                    <h2 class="post-card-title">{{ .Title }}</h2>
+                    <div class="post-card-meta">
+                        <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+                            {{ .Date.Format "Jan 2, 2006" }}
+                        </time>
+                        {{ if .Params.categories }}
+                        <div class="post-card-categories">
+                            {{ range first 1 .Params.categories }}
+                            <span class="post-card-category">{{ humanize . }}</span>
+                            {{ end }}
+                        </div>
+                        {{ end }}
+                    </div>
+                    <div class="post-card-excerpt">
+                        {{ if .Description }}
+                        {{ .Description }}
+                        {{ else }}
+                        {{ .Summary | truncate 120 }}
+                        {{ end }}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+
+    {{ template "_internal/pagination.html" . }}
+</div>
+
+<style>
+    .list-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .list-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .list-title {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        font-weight: 800;
+    }
+
+    .list-description {
+        font-size: 1.1rem;
+        color: var(--text-color);
+        opacity: 0.8;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .taxonomy-info {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+        color: var(--text-color);
+        opacity: 0.7;
+    }
+
+    .posts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .post-card {
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        background-color: var(--card-background);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        height: 100%;
+    }
+
+    .post-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .post-card-link {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        color: var(--text-color);
+        text-decoration: none;
+    }
+
+    .post-card-image {
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+    }
+
+    .post-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+
+    .post-card:hover .post-card-image img {
+        transform: scale(1.05);
+    }
+
+    .post-card-image-placeholder {
+        background-color: var(--secondary-background);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .placeholder-icon {
+        font-size: 2rem;
+        opacity: 0.4;
+    }
+
+    .post-card-content {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        padding: 1.5rem;
+    }
+
+    .post-card-title {
+        font-size: 1.3rem;
+        margin-bottom: 0.7rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .post-card-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+        opacity: 0.7;
+    }
+
+    .post-card-categories {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .post-card-category {
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 0.75rem;
+    }
+
+    .post-card-excerpt {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        opacity: 0.8;
+        flex-grow: 1;
+    }
+
+    /* Pagination styles */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 3rem;
+    }
+
+    .page-item {
+        list-style: none;
+    }
+
+    .page-link {
+        display: block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .page-link:hover {
+        background-color: var(--secondary-background);
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .page-item.disabled .page-link {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+        .list-title {
+            font-size: 2rem;
+        }
+
+        .posts-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+    }
+</style>
+{{ end }} 

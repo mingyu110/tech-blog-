@@ -1,4 +1,4 @@
-baseURL = 'https://mingyu110.github.io/tech-blog-/'
+baseURL = 'https://chipper-brioche-69651f.netlify.app/'
 languageCode = 'zh-cn'
 title = '技术博客'
 theme = 'Simple'

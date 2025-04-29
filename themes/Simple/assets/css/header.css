@@ -1,0 +1,227 @@
+/* Header & Navigation */
+.header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    background-color: var(--background-color);
+    z-index: 1000;
+    transition: box-shadow 0.3s;
+}
+
+.header.shadow {
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.site-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--heading-color);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.site-title:hover {
+    text-decoration: none;
+    color: var(--primary-color);
+}
+
+.logo {
+    height: 2rem;
+    width: auto;
+    margin-right: 0.5rem;
+    margin-bottom: 0;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-item {
+    margin: 0 0 0 1.5rem;
+    margin-bottom: 0;
+}
+
+.nav-link {
+    color: var(--text-color);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+    padding: 0.25rem 0;
+    position: relative;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: var(--primary-color);
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--primary-color);
+    transition: width 0.3s;
+}
+
+.nav-link:hover::after, .nav-link.active::after {
+    width: 100%;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    width: 2rem;
+    height: 2rem;
+    padding: 0.25rem;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 1rem;
+}
+
+.theme-toggle:hover {
+    background-color: var(--button-hover);
+}
+
+.theme-toggle svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+}
+
+.sun-icon, .moon-icon {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+[data-theme="light"] .sun-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+[data-theme="light"] .moon-icon {
+    opacity: 0;
+    transform: scale(0);
+    position: absolute;
+}
+
+[data-theme="dark"] .moon-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+[data-theme="dark"] .sun-icon {
+    opacity: 0;
+    transform: scale(0);
+    position: absolute;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-button {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    padding: 0.5rem;
+    cursor: pointer;
+    width: 2.5rem;
+    height: 2.5rem;
+    position: relative;
+}
+
+.burger {
+    position: relative;
+    width: 1.5rem;
+    height: 0.125rem;
+    background-color: var(--text-color);
+    margin: 0 auto;
+    transition: background-color 0.3s;
+}
+
+.burger::before, .burger::after {
+    content: '';
+    position: absolute;
+    width: 1.5rem;
+    height: 0.125rem;
+    background-color: var(--text-color);
+    transition: transform 0.3s;
+}
+
+.burger::before {
+    transform: translateY(-0.4rem);
+}
+
+.burger::after {
+    transform: translateY(0.4rem);
+}
+
+.mobile-menu-button.active .burger {
+    background-color: transparent;
+}
+
+.mobile-menu-button.active .burger::before {
+    transform: rotate(45deg);
+}
+
+.mobile-menu-button.active .burger::after {
+    transform: rotate(-45deg);
+}
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+    .mobile-menu-button {
+        display: block;
+        order: 3;
+    }
+    
+    .theme-toggle {
+        order: 2;
+    }
+    
+    .nav-menu {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        order: 4;
+    }
+    
+    .nav-menu.active {
+        max-height: 500px;
+    }
+    
+    .nav-item {
+        margin: 0.75rem 0;
+        width: 100%;
+    }
+    
+    .nav-link {
+        display: block;
+        padding: 0.5rem 0;
+    }
+    
+    .site-title {
+        order: 1;
+    }
+} 
