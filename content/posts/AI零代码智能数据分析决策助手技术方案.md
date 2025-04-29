@@ -334,3 +334,5 @@ data_json = json.dumps(result)
 本项目使用了基于Flask的模拟后端API服务来支持数据分析和SQL查询功能。关于该服务的详细说明，包括接口描述、数据库结构、环境配置和使用方法等，请参考database-api-service目录下的README.pdf文件。
 
 该服务为AI零代码智能数据分析决策助手提供了必要的后端支持，可直接通过API调用执行SQL查询并获取数据分析结果。
+
+GitHub地址：[database-api-service](https://github.com/mingyu110/database-api-service)
