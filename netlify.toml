@@ -13,4 +13,11 @@
   command = "hugo --minify --baseURL $DEPLOY_PRIME_URL"
 
 [context.branch-deploy]
-  command = "hugo --minify --baseURL $DEPLOY_PRIME_URL" 
+  command = "hugo --minify --baseURL $DEPLOY_PRIME_URL"
+
+# 添加重定向规则，将Netlify域名重定向到自定义域名
+[[redirects]]
+  from = "https://chipper-brioche-69651f.netlify.app/*"
+  to = "https://mingyu.lighting/:splat"
+  status = 301
+  force = true 
