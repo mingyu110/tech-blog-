@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Istio on 技术博客</title>
+    <link>http://localhost:53966/tags/istio/</link>
+    <description>Recent content in Istio on 技术博客</description>
+    <generator>Hugo -- 0.147.0</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Thu, 21 Mar 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:53966/tags/istio/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Istio 服务网格入门指南</title>
+      <link>http://localhost:53966/posts/istio-introduction/</link>
+      <pubDate>Thu, 21 Mar 2024 00:00:00 +0000</pubDate>
+      <guid>http://localhost:53966/posts/istio-introduction/</guid>
+      <description>深入浅出理解 Istio 服务网格的核心概念、架构设计和实践应用</description>
+    </item>
+  </channel>
+</rss>

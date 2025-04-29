@@ -1,0 +1,52 @@
+baseURL = 'http://localhost:1313/'
+languageCode = 'zh-cn'
+title = '技术博客'
+theme = 'PaperMod'
+
+[params]
+  # 网站描述
+  description = "我的技术博客"
+  # 作者信息
+  author = "Your Name"
+  # 默认图片
+  defaultTheme = "auto"
+  # 显示阅读时间
+  ShowReadingTime = true
+  # 显示字数统计
+  ShowWordCount = true
+  # 显示最后修改时间
+  ShowLastMod = true
+  # 显示分享按钮
+  ShowShareButtons = true
+  # 显示目录
+  ShowToc = true
+  # 目录深度
+  TocDepth = 3
+  # 主页模式
+  mainSections = ["posts"]
+
+[params.homeInfoParams]
+  Title = "欢迎来到我的技术博客 👋"
+  Content = "这里是我分享技术文章的地方"
+
+[menu]
+  [[menu.main]]
+    identifier = "posts"
+    name = "文章"
+    url = "/posts/"
+    weight = 10
+  [[menu.main]]
+    identifier = "tags"
+    name = "标签"
+    url = "/tags/"
+    weight = 20
+  [[menu.main]]
+    identifier = "categories"
+    name = "分类"
+    url = "/categories/"
+    weight = 30
+  [[menu.main]]
+    identifier = "about"
+    name = "关于"
+    url = "/about/"
+    weight = 40
