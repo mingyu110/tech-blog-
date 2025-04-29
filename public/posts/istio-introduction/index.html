@@ -1,22 +1,269 @@
 <!DOCTYPE html>
-<html>
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
-    <meta charset="utf-8">
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Istio 服务网格入门指南 - 技术博客</title>
+    <meta name="description" content="深入浅出理解 Istio 服务网格的核心概念、架构设计和实践应用">
+    
+    
+    
+    <link rel="icon" href="/favicon.ico">
+    
+    
+    
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --text-color: #333;
+            --background-color: #fff;
+            --secondary-background: #f5f5f5;
+            --border-color: #eaeaea;
+            --link-color: #0066cc;
+            --link-hover-color: #004080;
+            --code-background: #f5f5f5;
+            --code-color: #d63384;
+            --blockquote-border: #ddd;
+            --blockquote-background: #f9f9f9;
+            --header-background: rgba(255, 255, 255, 0.95);
+            --footer-background: #f5f5f5;
+            --max-width: 800px;
+        }
+        
+        [data-theme="dark"] {
+            --primary-color: #3d91ff;
+            --text-color: #e0e0e0;
+            --background-color: #1a1a1a;
+            --secondary-background: #2a2a2a;
+            --border-color: #383838;
+            --link-color: #3d91ff;
+            --link-hover-color: #66a6ff;
+            --code-background: #2d2d2d;
+            --code-color: #ff7b9d;
+            --blockquote-border: #555;
+            --blockquote-background: #2d2d2d;
+            --header-background: rgba(26, 26, 26, 0.95);
+            --footer-background: #222;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        a:hover {
+            color: var(--link-hover-color);
+        }
+        
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .header {
+            background-color: var(--header-background);
+            padding: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        .header-container, .main-container, .footer-container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo a {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        
+        .navbar {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .navbar a {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        
+        .navbar a:hover {
+            color: var(--primary-color);
+        }
+        
+        .theme-toggle, .menu-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+        }
+        
+        .menu-toggle {
+            display: none;
+        }
+        
+        .main {
+            padding: 3rem 0;
+            min-height: calc(100vh - 130px);
+        }
+        
+        .footer {
+            background-color: var(--footer-background);
+            padding: 2rem 0;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .social-links a {
+            color: var(--text-color);
+            transition: color 0.2s;
+        }
+        
+        .social-links a:hover {
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+            
+            .navbar {
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background-color: var(--header-background);
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transform: translateY(-200%);
+                transition: transform 0.3s ease;
+            }
+            
+            .navbar.active {
+                transform: translateY(0);
+            }
+            
+            .navbar a {
+                padding: 0.5rem 0;
+            }
+            
+            .header-content {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>技术博客</h1>
-        <nav>
-            <a href="http://localhost:1313/">首页</a>
-        </nav>
+    <header class="header">
+        <div class="header-container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="https://chipper-brioche-69651f.netlify.app/">技术博客</a>
+                </div>
+                <button class="menu-toggle" aria-label="Toggle menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <nav class="navbar">
+                    
+                    
+                    <a href="/posts/" >文章</a>
+                    
+                    <a href="/tags/" >标签</a>
+                    
+                    <a href="/categories/" >分类</a>
+                    
+                    <a href="/about/" >关于</a>
+                    
+                    <button class="theme-toggle" aria-label="Toggle dark mode">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
     </header>
-    <main>
-        <article>
-            <h1>Istio 服务网格入门指南</h1>
-            <time>2024-03-21</time>
-            <div>
-                <h2 id="什么是-istio">什么是 Istio？</h2>
+    
+    <main class="main">
+        <div class="main-container">
+            
+<article class="post">
+    <header class="post-header">
+        <h1 class="post-title">Istio 服务网格入门指南</h1>
+        <div class="post-meta">
+            <time datetime="2024-03-21T00:00:00Z">
+                March 21, 2024
+            </time>
+            
+            <span class="post-author">by Your Name</span>
+            
+            
+            <div class="post-categories">
+                
+                
+                <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" class="post-category">云原生</a>
+                
+            </div>
+            
+        </div>
+    </header>
+
+    
+
+    <div class="post-content">
+        <h2 id="什么是-istio">什么是 Istio？</h2>
 <p>Istio 是一个开源的服务网格平台，它提供了一种统一的方式来管理、连接和保护微服务。作为一个服务网格，Istio 在不修改应用程序代码的情况下，为分布式应用程序提供了流量管理、安全性和可观察性等关键功能。</p>
 <h2 id="istio-的核心功能">Istio 的核心功能</h2>
 <h3 id="1-流量管理">1. 流量管理</h3>
@@ -78,11 +325,346 @@
 <li><a href="https://www.servicemesh.io/">服务网格模式</a></li>
 </ol>
 
-            </div>
-        </article>
+    </div>
+
+    
+    <div class="post-tags">
+        <span class="tags-title">Tags:</span>
+        <div class="tags-list">
+            
+            
+            <a href="/tags/istio/" class="post-tag">Istio</a>
+            
+            
+            <a href="/tags/kubernetes/" class="post-tag">Kubernetes</a>
+            
+            
+            <a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="post-tag">微服务</a>
+            
+            
+            <a href="/tags/%E6%9C%8D%E5%8A%A1%E7%BD%91%E6%A0%BC/" class="post-tag">服务网格</a>
+            
+        </div>
+    </div>
+    
+
+    <div class="post-navigation">
+        <div class="post-nav-item post-nav-prev">
+            
+            <span class="post-nav-label">Previous</span>
+            <a href="https://chipper-brioche-69651f.netlify.app/posts/my-first-post/">我的第一篇技术博客</a>
+            
+        </div>
+        <div class="post-nav-item post-nav-next">
+            
+        </div>
+    </div>
+
+    
+</article>
+
+<style>
+    .post {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+
+    .post-header {
+        margin-bottom: 2rem;
+    }
+
+    .post-title {
+        font-size: 2.5rem;
+        line-height: 1.2;
+        margin-bottom: 1rem;
+        font-weight: 800;
+    }
+
+    .post-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.95rem;
+        color: var(--text-color);
+        opacity: 0.7;
+        margin-bottom: 1rem;
+    }
+
+    .post-author {
+        font-style: italic;
+    }
+
+    .post-categories {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .post-category {
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .post-featured-image {
+        margin-bottom: 2rem;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .post-featured-image img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .post-content {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        margin-bottom: 3rem;
+    }
+
+    .post-content p {
+        margin-bottom: 1.5rem;
+    }
+
+    .post-content h2 {
+        font-size: 1.8rem;
+        margin: 2.5rem 0 1rem;
+    }
+
+    .post-content h3 {
+        font-size: 1.5rem;
+        margin: 2rem 0 1rem;
+    }
+
+    .post-content ul, .post-content ol {
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem;
+    }
+
+    .post-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .post-content blockquote {
+        margin: 2rem 0;
+        padding: 1rem 1.5rem;
+        border-left: 4px solid var(--primary-color);
+        background-color: var(--secondary-background);
+        font-style: italic;
+    }
+
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 1.5rem 0;
+    }
+
+    .post-content pre {
+        background-color: var(--code-background);
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 1.5rem 0;
+    }
+
+    .post-content code {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.9rem;
+        padding: 0.1rem 0.3rem;
+        background-color: var(--code-background);
+        border-radius: 3px;
+    }
+
+    .post-content pre code {
+        padding: 0;
+        background-color: transparent;
+    }
+
+    .post-tags {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 3rem;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.5rem 0;
+    }
+
+    .tags-title {
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+
+    .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .post-tag {
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        background-color: var(--secondary-background);
+        border: 1px solid var(--border-color);
+        font-size: 0.8rem;
+        transition: background-color 0.2s;
+    }
+
+    .post-tag:hover {
+        background-color: var(--border-color);
+    }
+
+    .post-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin: 3rem 0;
+    }
+
+    .post-nav-item {
+        max-width: 45%;
+    }
+
+    .post-nav-label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.7;
+    }
+
+    .post-nav-prev {
+        text-align: left;
+    }
+
+    .post-nav-next {
+        text-align: right;
+    }
+
+    .post-comments {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .comments-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .comments-placeholder {
+        text-align: center;
+        padding: 2rem;
+        background-color: var(--secondary-background);
+        border-radius: 8px;
+        font-style: italic;
+        opacity: 0.8;
+    }
+
+    @media (max-width: 768px) {
+        .post {
+            padding: 1rem;
+        }
+
+        .post-title {
+            font-size: 2rem;
+        }
+
+        .post-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .post-content {
+            font-size: 1rem;
+        }
+
+        .post-navigation {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .post-nav-item {
+            max-width: 100%;
+        }
+    }
+</style>
+
+        </div>
     </main>
-    <footer>
-        <p>&copy; 2025 刘晋勋</p>
+    
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="copyright">
+                    &copy; 2025 技术博客. All rights reserved.
+                </div>
+                <div class="social-links">
+                    
+                    
+                    
+                    
+                </div>
+            </div>
+        </div>
     </footer>
+    
+    <script>
+        
+        const themeToggle = document.querySelector('.theme-toggle');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        
+        const currentTheme = localStorage.getItem('theme') || 
+                            (prefersDarkScheme.matches ? 'dark' : 'light');
+        
+        
+        if (currentTheme === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            themeToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+        }
+        
+        
+        themeToggle.addEventListener('click', () => {
+            let theme = 'light';
+            let icon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+            
+            if (!document.body.getAttribute('data-theme') || 
+                document.body.getAttribute('data-theme') === 'light') {
+                document.body.setAttribute('data-theme', 'dark');
+                theme = 'dark';
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+            
+            localStorage.setItem('theme', theme);
+            themeToggle.innerHTML = icon;
+        });
+        
+        
+        const menuToggle = document.querySelector('.menu-toggle');
+        const navbar = document.querySelector('.navbar');
+        
+        menuToggle.addEventListener('click', () => {
+            navbar.classList.toggle('active');
+        });
+        
+        
+        document.addEventListener('click', (e) => {
+            if (!navbar.contains(e.target) && !menuToggle.contains(e.target) && navbar.classList.contains('active')) {
+                navbar.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html> 
