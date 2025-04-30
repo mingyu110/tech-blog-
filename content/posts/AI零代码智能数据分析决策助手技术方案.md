@@ -324,10 +324,9 @@ data_json = json.dumps(result)
 - 启动API服务
 - 配置工作流节点
 
-## 四、详细工作流及开发平台
+## 四、工作流文件
 
-- 请查看文件：AI零代码智能数据分析决策助手.yml
-- 开发平台：Dify.ai
+工作流配置文件可以在以下链接查看：[AI零代码智能数据分析决策助手.yml](https://github.com/mingyu110/AI/blob/main/AI%E9%9B%B6%E4%BB%A3%E7%A0%81%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90%E5%86%B3%E7%AD%96%E5%8A%A9%E6%89%8B.yml)
 
 ## 五、模拟后端API服务说明
 
