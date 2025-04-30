@@ -324,13 +324,14 @@ data_json = json.dumps(result)
 - 启动API服务
 - 配置工作流节点
 
-## 四、详细工作流及开发平台
+## 四、工作流文件
 
-- 请查看文件：AI零代码智能数据分析决策助手.yml
-- 开发平台：Dify.ai
+工作流配置文件可以在以下链接查看：[AI零代码智能数据分析决策助手.yml](https://github.com/mingyu110/AI/blob/main/AI%E9%9B%B6%E4%BB%A3%E7%A0%81%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90%E5%86%B3%E7%AD%96%E5%8A%A9%E6%89%8B.yml)
 
 ## 五、模拟后端API服务说明
 
 本项目使用了基于Flask的模拟后端API服务来支持数据分析和SQL查询功能。关于该服务的详细说明，包括接口描述、数据库结构、环境配置和使用方法等，请参考database-api-service目录下的README.pdf文件。
 
 该服务为AI零代码智能数据分析决策助手提供了必要的后端支持，可直接通过API调用执行SQL查询并获取数据分析结果。
+
+GitHub地址：[database-api-service](https://github.com/mingyu110/database-api-service)
