@@ -30,7 +30,7 @@ toc: true
 
 本解决方案采用无服务器架构，主要由以下组件构成：
 
-![架构图](/images/architecture.jpg)
+![架构图](/images/aws-architecture.jpg)
 
 1. **AWS Config**：负责持续监控和记录 AWS 资源配置变更，检测不合规的资源
 2. **AWS EventBridge**：处理各类事件触发器，如 Config 规则变更、EC2 状态变更
