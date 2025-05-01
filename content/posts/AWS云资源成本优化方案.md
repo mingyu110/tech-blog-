@@ -1,6 +1,6 @@
 ---
 title: "AWS云资源成本及合规自动化优化方案"
-date: 2024-07-05
+date: 2025-05-01
 draft: false
 tags: ["AWS", "云计算", "成本优化", "自动化", "Terraform"]
 categories: ["云计算"]
