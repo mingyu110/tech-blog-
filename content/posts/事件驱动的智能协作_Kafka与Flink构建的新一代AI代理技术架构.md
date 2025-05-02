@@ -1,6 +1,6 @@
 ---
 title: "事件驱动的智能协作：Kafka与Flink构建的新一代AI代理技术架构"
-date: 2025-05-03
+date: 2025-05-02
 draft: false
 tags: ["Kafka", "Flink", "AI代理", "事件驱动"]
 categories: ["技术架构", "AI应用"]

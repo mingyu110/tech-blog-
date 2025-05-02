@@ -2,6 +2,7 @@ baseURL = 'https://mingyu.lighting/'
 languageCode = 'zh-cn'
 title = '技术博客'
 theme = 'Simple'
+buildFuture = true
 
 [params]
   # 网站描述
