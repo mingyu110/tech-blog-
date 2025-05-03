@@ -18,7 +18,7 @@ Istio 是一个开源的服务网格平台，用于连接、管理和保护微�
 
 ## Istio 整体架构
 
-![Istio 整体架构](/images/istio-architecture.png)
+![Istio 整体架构](/images/istio-architecture.jpg)
 
 Istio 服务网格在逻辑上分为数据平面和控制平面：
 
@@ -29,7 +29,7 @@ Istiod 作为控制平面的核心组件，集成了多个功能，包括服务�
 
 ## Istiod 工作流程
 
-![Istiod 工作流程](/images/istiod-workflow.png)
+![Istiod 工作流程](/images/istiod-workflow.jpg)
 
 上图展示了 Istiod 的工作流程：
 
@@ -42,7 +42,7 @@ Istiod 作为控制平面的核心组件，集成了多个功能，包括服务�
 
 ## Istiod 模块组成
 
-![Istiod 模块组成](/images/istiod-modules.png)
+![Istiod 模块组成](/images/istiod-modules.jpg)
 
 Istiod 内部由多个模块组成：
 
@@ -55,7 +55,7 @@ Istiod 内部由多个模块组成：
 
 ## Istio 服务发现
 
-![Istio 服务发现](/images/istio-service-discovery.png)
+![Istio 服务发现](/images/istio-service-discovery.jpg)
 
 Istio 的服务发现机制：
 
@@ -68,7 +68,7 @@ Istio 的服务发现机制：
 
 ## Sidecar 注入流程
 
-![Sidecar 注入流程](/images/injection.png)
+![Sidecar 注入流程](/images/injection.jpg)
 
 Sidecar 注入是将 Envoy 代理添加到应用程序 Pod 中的过程：
 
@@ -81,7 +81,7 @@ Sidecar 注入是将 Envoy 代理添加到应用程序 Pod 中的过程：
 
 ## Envoy 代理工作序列
 
-![Envoy 代理工作序列](/images/istio-envoy-sequence.png)
+![Envoy 代理工作序列](/images/istio-envoy-sequence.jpg)
 
 当服务间通信发生时，Envoy 代理：
 
@@ -94,7 +94,7 @@ Sidecar 注入是将 Envoy 代理添加到应用程序 Pod 中的过程：
 
 ## Istio Ingress Gateway
 
-![Istio Ingress Gateway](/images/Istio%20Ingress%20gateway.jpg)
+![Istio Ingress Gateway](/images/Istio-Ingress-gateway.jpg "Istio Ingress Gateway")
 
 Istio Ingress Gateway 控制进入服务网格的流量：
 
