@@ -22,7 +22,7 @@ Kubernetes使用Linux内核的完全公平调度器(CFS)实现CPU资源限制。
 
 ### 2.2 CPU节流导致的性能问题
 
-![CFS带宽控制模型](/static/images/cpu-throttled.jpg)
+![CFS带宽控制模型](/images/CPU-throttled.jpg "CPU节流示意图")
 
 如上图所示，即使容器的平均CPU使用率远低于其限制，容器依然可能因短时间内的高CPU使用而被节流。这会导致：
 
@@ -36,7 +36,7 @@ Kubernetes使用Linux内核的完全公平调度器(CFS)实现CPU资源限制。
 
 多线程应用在CFS调度器下面临更严重的问题：
 
-![多线程CPU节流图解](/static/images/mutithread-cpu-throttled.jpg)
+![多线程CPU节流图解](/images/mutithread-cpu-throttled.jpg "多线程CPU节流示意图")
 
 以10个线程并行运行在2核CPU限制的场景为例：
 - 每个线程在独立核心上运行时，第一个20毫秒就累计消耗200毫秒CPU时间
@@ -53,7 +53,7 @@ CPU Burst功能能够动态感知CPU节流现象并对容器参数进行自适�
 2. **动态调整CFS参数**：根据容器的历史CPU使用模式调整cgroup参数
 3. **弹性资源分配**：在负载高峰期临时提供额外CPU资源
 
-![CPU Burst工作原理](/static/images/cpu-burst.jpg)
+![CPU Burst工作原理](/images/CPU-Burst.jpg "CPU Burst工作原理")
 
 ### 3.2 核心技术指标
 
