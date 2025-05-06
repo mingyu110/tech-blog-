@@ -25,6 +25,7 @@ buildFuture = true
   TocDepth = 3
   # 主页模式
   mainSections = ["posts"]
+  math = true
 
 [params.homeInfoParams]
   Title = "欢迎来到我的技术博客 👋"
