@@ -78,7 +78,7 @@ categories: ["云计算", "DevOps"]
 
 下面是使用GitHub Actions部署AWS Lambda函数的安全流水线架构：
 
-![AWS Lambda部署流程图](AWS_Lambda部署流程.png)
+![AWS Lambda部署流程图](/images/AWS_Lambda_Deployment.jpg)
 
 ## 实现步骤
 
