@@ -37,7 +37,7 @@ draft: false
 - MLOps
 
 ### 其他技术
-- DevOps
+- DevSecOps/GitOps
 - 微服务架构
 - 系统性能优化
 - 技术架构评审
