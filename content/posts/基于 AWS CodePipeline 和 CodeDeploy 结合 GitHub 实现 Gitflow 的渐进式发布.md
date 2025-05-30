@@ -95,7 +95,9 @@ draft: false
 
 下图展示了完整的 GitFlow 分支策略与 AWS CI/CD 流水线的集成流程：
 
-![GitFlow 与 AWS CI/CD 流程图](gitflow_cd_pipeline.png)该流程图清晰展示了：
+![GitFlow 与 AWS CI/CD 流程图](/images/gitflow_cd_pipeline.png)
+
+该流程图清晰展示了：
 
 - **分支管理**：main、develop、feature、release、hotfix 分支之间的关系和合并流程
 - **CI/CD 触发**：main 和 develop 分支的合并如何触发 AWS CodePipeline
