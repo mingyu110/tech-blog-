@@ -45,7 +45,7 @@ draft: false
 
 #### 2.2 方案架构图
 
-<img src="/Users/jinxunliu/my-microservice/enhanced_aws_architecture.png" alt="enhanced_aws_architecture" style="zoom:67%;" />
+![AWS CodePipeline和CodeDeploy架构图](/images/enhanced_aws_architecture.png)
 
 ### 3.Gitflow 分支策略
 
@@ -102,7 +102,7 @@ draft: false
 - **自动化流程**：从代码提交到容器化部署的完整自动化流水线
 - **蓝绿部署**：CodeDeploy 实现的蓝绿部署策略，确保零停机时间
 
-​       ![运行结果](/Users/jinxunliu/Desktop/运行结果.jpg)
+​       ![运行结果](/images/运行结果.jpg)
 
 ### 4. 技术实现实践步骤
 
