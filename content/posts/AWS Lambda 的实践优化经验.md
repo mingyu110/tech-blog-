@@ -1,6 +1,6 @@
 ---
 title: "AWS Lambda 函数计算在实际应用落地过程中的生产实践经验"
-date: 2024-12-19
+date: 2025-06-01
 draft: false
 tags: ["AWS", "Lambda", "函数计算", "无服务器", "云计算", "性能优化"]
 categories: ["云原生"]
