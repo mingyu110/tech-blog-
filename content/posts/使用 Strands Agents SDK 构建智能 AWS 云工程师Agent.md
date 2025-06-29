@@ -1,6 +1,6 @@
 ---
 title: "使用 Strands Agents SDK 构建智能 AWS 云工程师Agent"
-date: 2025-01-08
+date: 2025-06-29
 draft: false
 tags: ["AWS", "AI Agent", "Strands SDK", "MCP协议", "云架构", "自动化"]
 categories: ["AI技术", "云原生"]
