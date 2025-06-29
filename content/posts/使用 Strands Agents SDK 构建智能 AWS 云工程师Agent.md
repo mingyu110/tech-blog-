@@ -318,4 +318,6 @@ AWS云架构师智能Agent的核心功能：
 
 ### 7. 演示效果
 
-![演示效果](/images/运行效果 20250629.gif)
+下面是系统运行的演示：
+
+![Strands Agents SDK AWS云工程师Agent演示](/images/运行效果 20250629.gif "使用 Strands Agents SDK 构建智能 AWS 云工程师Agent 演示")
