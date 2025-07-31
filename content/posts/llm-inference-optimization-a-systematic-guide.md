@@ -143,7 +143,7 @@ LLM推理优化是一项典型且复杂的**全栈系统工程**，它的成功�
 
 为了解决上述问题，一个现代化的AI网关必须具备感知和处理AI特定信息的能力。以**Envoy AI Gateway**等前沿实践为例，其核心是通过可扩展的**端点选择器（Endpoint Picker）**机制，实现智能、动态的路由决策。
 
-<img src="/images/ai-gateway.png" alt="图片" style="zoom:80%;" />
+![AI网关架构图](/images/ai-gateway.png)
 
 其关键能力包括：
 
