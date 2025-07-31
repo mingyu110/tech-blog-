@@ -1,13 +1,3 @@
----
-title: "LLM大模型推理优化：一套系统化的全栈工程方法"
-date: 2025-07-31
-draft: false
-tags: ["LLM", "推理优化", "系统架构", "云原生", "KServe", "vLLM", "TensorRT-LLM", "PD分离", "AI工程"]
-categories: ["AI工程与优化", "系统架构"]
-description: "本文源于一个真实的、以云原生为核心的SaaS化AI平台实践，系统性地解构了大型语言模型（LLM）的推理优化问题。文章采用全栈分层思想，从底层的基础设施（GPU/InfiniBand/存储加速）、PaaS平台（K8s/Volcano/KServe/多集群），到上层的服务容器、智能AI网关，最终深入到推理引擎内核（模型架构创新、压缩技术、PD分离/聚合、分布式通信）等每一个关键层面，为您呈现一幅从硬件到算法、从理论到实践的、完整的LLM推理优化全景图，并附有详细的团队职责分配矩阵，是构建高性能、低成本LLM服务的终极行动指南。"
-toc: true
----
-
 # LLM大模型推理优化：一套系统化的全栈工程方法
 
 ## 引言：从全功能AI平台到LLM推理优化的深度聚焦
@@ -18,7 +8,7 @@ toc: true
 
 因此，本文将在这个真实的平台背景下，暂时收敛视角，专注于“LLM推理优化”这一垂直但至关重要的领域。我们将采用“**系统分层、功能解耦**”的架构思想，自底向上地对整个LLM推理服务栈进行一次全面的、系统性的梳理与解析，旨在为您呈现一幅从基础设施到模型算法、从理论到实践的、完整的LLM推理优化全景图。
 
-![LLM推理服务全栈架构](./flowchart.png)
+![LLM推理服务全栈架构](/images/flowchart.png)
 
 LLM推理优化是一项典型且复杂的**全栈系统工程**，它的成功绝非任何单一角色或单一层面优化的结果，而是需要从基础设施工程师到软件架构师、从平台架构师到算法科学家的紧密协同与深度对话。为了更清晰地指引在真实团队中的落地实践，我们将整个优化栈的职责归纳为以下矩阵：LLM推理平台优化职责分配矩阵 (Responsibility Assignment Matrix)
 
@@ -153,7 +143,7 @@ LLM推理优化是一项典型且复杂的**全栈系统工程**，它的成功�
 
 为了解决上述问题，一个现代化的AI网关必须具备感知和处理AI特定信息的能力。以**Envoy AI Gateway**等前沿实践为例，其核心是通过可扩展的**端点选择器（Endpoint Picker）**机制，实现智能、动态的路由决策。
 
-<img src="https://mmbiz.qpic.cn/mmbiz_png/GpkQxibjhkJzN4Eh441WCHa6QBHuEYSJRAyRK8ckRlMoNF6axzH3uUbyIhzektrgdPicrVG4ib3u39PkBwackJaZQ/640?wx_fmt=png&from=appmsg&randomid=zlejhcpt&tp=wxpic&wxfrom=5&wx_lazy=1" alt="图片" style="zoom:80%;" />
+<img src="/images/ai-gateway.png" alt="图片" style="zoom:80%;" />
 
 其关键能力包括：
 
@@ -349,4 +339,3 @@ LLM推理优化是一项典型且复杂的**全栈系统工程**，它的成功�
 **最终建议**：首先对您的应用进行性能剖析，了解工作负载特性和瓶颈。对于大规模服务，在**PD分离**上的工程投入几乎肯定会得到回报。对于延迟敏感的小型应用，**PD聚合/融合**是通往生产环境更安全、更快捷的路径。
 
 ---
-
