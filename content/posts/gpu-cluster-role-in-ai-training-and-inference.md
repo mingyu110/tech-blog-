@@ -24,8 +24,6 @@ tags: ["GPU", "AI Platform", "MLOps", "模型训练", "模型推理", "系统架
 
 在训练阶段，我们面对的是巨大的数据集和日益复杂的模型。核心目标是**通过并行计算大幅缩短模型从开始训练到最终收敛所需的时间**。集群在此阶段的作用是“集中力量办大事”。
 
-![图片](/images/gpu-cluster-roles-1.png)
-
 #### **核心加速方式：大规模并行计算**
 
 1.  **数据并行 (Data Parallelism) - 最主流的应用**
@@ -41,8 +39,6 @@ tags: ["GPU", "AI Platform", "MLOps", "模型训练", "模型推理", "系统架
 **训练阶段总结:**
 GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通信网络**，将一个原本需要数月甚至数年的训练任务，压缩到数周或数天内完成。其核心衡量指标是**训练吞吐量 (Throughput)**，即单位时间内能处理的数据样本量（如 `samples/sec`），以及随节点增加而带来的**扩展效率 (Scaling Efficiency)**。
 
-![图片](/images/gpu-cluster-roles-2.png)
-
 ---
 
 ## 二、 GPU集群对模型推理的加速作用：聚焦于“低延迟”与“高吞吐”
@@ -57,7 +53,7 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
 
 大模型通常拥有数十亿甚至上百亿的参数，这使得模型在推理阶段需要大量的计算资源和能耗。超大模型参数和超长序列是大模型的发展趋势，这使得大模型推理对计算和内存的需求日益增加。同时，模型参数的增长速度远快于硬件内存容量的提升速度，进一步加剧了推理中的内存瓶颈问题。
 
-![图片](https://mmbiz.qpic.cn/mmbiz_png/1BMf5Ir754QxlIGic88V31pKgCXBLtkeXo1O3PlWgPys55ic0DMNbRaeSbmMibYLmhP1ZJIlyIZSnDzNVGbDco3Dg/640?wx_fmt=png&from=appmsg&randomid=d0woc0ki&tp=wxpic&wxfrom=5&wx_lazy=1)
+![图片](/images/gpu-cluster-roles-1.png)
 
 **2. 延迟和吞吐量之间的权衡**
 
@@ -65,7 +61,7 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
 *   **自回归推理的低计算效率**：在Decode阶段，逐token生成的方式导致计算多为GEMV（矩阵向量乘法），其计算密度远低于训练时的GEMM（矩阵矩阵乘法），难以充分发挥GPU的算力。
 *   **任务不均衡与调度困难**：不同请求的输入和输出长度各不相同，使得高效的批量化（Batching）处理变得非常困难，加剧了资源利用的不均衡。
 
-![图片](https://mmbiz.qpic.cn/mmbiz_png/1BMf5Ir754QxlIGic88V31pKgCXBLtkeXDMYx9oFI3dqiaCcWJZqAyg7BdStLv0frSoTdib69BhIQBJMETicicuOB6g/640?wx_fmt=png&from=appmsg&randomid=19qydpki&tp=wxpic&wxfrom=5&wx_lazy=1)
+![图片](/images/gpu-cluster-roles-2.png)
 
 **3. 从单模态到多模态的推理成本增加**
 
@@ -87,8 +83,6 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
     *   **工作原理**：GPU处理一个包含多个请求的批次（Batch），其效率远高于逐个处理单个请求。推理服务框架（如NVIDIA Triton Inference Server）可以在极短的时间窗口内（例如几毫秒），动态地将多个用户的独立请求**聚合（Batching）**成一个最优批次，再统一交给某一张GPU处理。
     *   **集群的加速价值**：集群环境为动态批处理提供了充足的请求来源和处理能力，使得这一优化策略能够有效实施，从而**极大提升单张GPU的利用效率和整个集群的吞吐量**。
 
-![图片](/images/gpu-cluster-roles-3.png)
-
 ---
 
 ## 三、 推理加速技术深度解析
@@ -102,7 +96,7 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
     *   **价值**：显著减少GPU Kernel的启动开销和对全局内存（HBM）的读写次数，将中间数据保留在高速的SRAM中完成计算，从而提升计算效率和内存带宽利用率。
     *   **典型代表**：**FlashAttention**。它通过Tiling技术，将巨大的Attention矩阵分块，在SRAM中完成计算，避免了对整个中间结果矩阵的读写，极大加速了Attention层的计算。
 
-    ![图片](https://mmbiz.qpic.cn/mmbiz_png/1BMf5Ir754QxlIGic88V31pKgCXBLtkeXnvqXcPokpicKDAtvozVZVFZ5ATWzHT3a5IGApF21vHWib3ykQkiaZmSBQ/640?wx_fmt=png&from=appmsg&randomid=yv5gzqes&tp=wxpic&wxfrom=5&wx_lazy=1)
+    ![图片](/images/gpu-cluster-roles-3.png)
 
 2.  **高性能加速库 (High-Performance Libraries)**
     *   **技术**：使用如NVIDIA的**FasterTransformer**、**TensorRT-LLM**等专用库。这些库内置了高度优化的算子实现，并支持自动的算子融合和模型图优化。
@@ -115,7 +109,7 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
     *   **价值**：**减少模型显存占用**：模型体积更小，可以在单卡上部署更大的模型。**加速计算**：低精度计算通常比高精度计算更快。**降低内存带宽需求**：数据传输量减小。
     *   **典型代表**：SmoothQuant, AWQ, GPTQ等先进的量化感知训练或训练后量化技术，旨在在降低精度的同时，最大限度地保持模型精度。
 
-    ![图片](https://mmbiz.qpic.cn/mmbiz_png/1BMf5Ir754QxlIGic88V31pKgCXBLtkeXS6lCGF0MZ6jria8vurRJbvqK3Xt7mrDOwXmwrBN96Jk3QRiaDmfUCa6g/640?wx_fmt=png&from=appmsg&randomid=m5nk92ub&tp=wxpic&wxfrom=5&wx_lazy=1)
+    ![图片](/images/gpu-cluster-roles-4.png)
 
 2.  **投机解码 (Speculative Decoding)**
     *   **技术**：使用一个计算开销小得多的“草稿模型”来一次性预测多个未来token，然后用原始的大模型一次性验证这些预测的token。
@@ -131,13 +125,11 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
     *   **技术**：借鉴操作系统中虚拟内存和分页的思想来管理KV Cache。它将KV Cache分割成固定大小的“块”（Block），逻辑上连续的KV序列可以映射到物理上不连续的块中。
     *   **价值**：**消除内存碎片**：极大提高了显存的利用效率。**简化内存管理**：使得KV Cache的共享和复制变得高效，是实现复杂采样算法（如Beam Search）和请求间资源共享的基础。
 
-    ![图片](https://mmbiz.qpic.cn/mmbiz_png/1BMf5Ir754QxlIGic88V31pKgCXBLtkeXEUeNjLQNIl32o10Z8ibcesfzMjGb2dzCvG532ZRyyJV5wgm0jq4NuZQ/640?wx_fmt=png&from=appmsg&randomid=xz6q7avc&tp=wxpic&wxfrom=5&wx_lazy=1)
+    ![图片](/images/gpu-cluster-roles-5.png)
 
 3.  **Prefill/Decode分离 (Split-Phase Execution)**
     *   **技术**：将计算密集但只执行一次的Prefill阶段和访存密集但需要多次迭代的Decode阶段，调度到不同的硬件或以不同的策略执行。
     *   **价值**：允许为两个阶段分别进行资源优化和调度，例如，可以用一个大的计算集群专门处理Prefill，用另一个IO优化的集群处理Decode，从而提高整个系统的效率。
-
-![图片](/images/gpu-cluster-roles-4.png)
 
 ---
 
@@ -151,8 +143,6 @@ GPU集群通过其**庞大的并行计算能力**和**极致优化的内部通�
 | **关键技术** | 数据/模型并行、`All-Reduce`、梯度同步 | 负载均衡、实例复制、动态批处理、模型并行、全栈优化 |
 | **网络要求** | **极致的低延迟和高带宽** (对`All-Reduce`至关重要) | 带宽依然重要，但更侧重于处理大量并发连接 |
 | **衡量指标** | 训练吞吐量 (samples/sec)、扩展效率 | 每秒查询数 (QPS)、单次请求延迟 (ms)、首token延迟 |
-
-![图片](/images/gpu-cluster-roles-5.png)
 
 ---
 
