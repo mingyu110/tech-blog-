@@ -54,7 +54,7 @@ draft: false
 
 ##### **3.1 架构图解析**
 
-![架构图描述](/Users/jinxunliu/Documents/medium/Multi_Tentant_KMS.png)
+![架构图描述](/images/Multi_Tentant_KMS.png)
 
 **架构图 1：集中化租户密钥管理流程**
 
