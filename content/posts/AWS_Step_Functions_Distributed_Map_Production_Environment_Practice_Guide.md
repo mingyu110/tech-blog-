@@ -100,7 +100,7 @@ AWS Step Functions 的 Map 状态能够为一个数据集内的多个条目执�
 *   **ItemProcessor**: 内部包含一个 Inline Map，用于处理一批对象。
 *   **初始批处理配置 (`ItemBatcher`)**: 为了模拟初始场景，我们将每个子工作流处理的批次大小（`MaxItemsPerBatch`）设置为一个较小的值。
 
-![简单分布式Map架构图](https://github.com/mingyu110/tech-blog-/blob/main/static/images/Nested%20Distributed%20Map%20Architecture.png)
+![简单分布式Map架构图]([https://github.com/mingyu110/tech-blog-/blob/main/static/images/Nested%20Distributed%20Map%20Architecture.png](https://github.com/mingyu110/tech-blog-/blob/main/static/images/Simple%20Distributed%20Map%20Architecture.png))
 
 ##### **执行结果与瓶颈**
 
@@ -125,7 +125,7 @@ AWS Step Functions 的 Map 状态能够为一个数据集内的多个条目执�
 1.  **父分布式Map (Parent Distributed Map)**: 负责第一层级的并行。它从S3读取所有对象，并将它们分组成较大的批次（例如，每批1800个对象），然后为每个大批次启动一个子工作流。
 2.  **子分布式Map (Child/Nested Distributed Map)**: 每个子工作流本身也是一个Distributed Map。它接收父级传递的大批次，并进行第二层级的并行处理，将大批次再切分成更小的批次（例如，每批50个对象）进行最终处理。
 
-![Nested Distributed Map Architecture](/images/medium/Nested Distributed Map Architecture.png)
+![嵌套分布式Map架构图](https://github.com/mingyu110/tech-blog-/blob/main/static/images/Nested%20Distributed%20Map%20Architecture.png)
 
 这种设计构建了一个两级的并行处理树，极大地增加了总体的并发度。
 
