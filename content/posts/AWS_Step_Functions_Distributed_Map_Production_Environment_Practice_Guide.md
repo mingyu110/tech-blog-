@@ -100,7 +100,7 @@ AWS Step Functions 的 Map 状态能够为一个数据集内的多个条目执�
 *   **ItemProcessor**: 内部包含一个 Inline Map，用于处理一批对象。
 *   **初始批处理配置 (`ItemBatcher`)**: 为了模拟初始场景，我们将每个子工作流处理的批次大小（`MaxItemsPerBatch`）设置为一个较小的值。
 
-![Simple Distributed Map Architecture](/images/Simple Distributed Map Architecture.png)
+![简单分布式Map架构图](https://github.com/mingyu110/tech-blog-/blob/main/static/images/Nested%20Distributed%20Map%20Architecture.png)
 
 ##### **执行结果与瓶颈**
 
