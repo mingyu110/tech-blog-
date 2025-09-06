@@ -1,3 +1,10 @@
+---
+title: "AWS Step Functions Distributed Map 生产环境实践指南"
+date: 2025-09-06
+draft: false
+tags: ["AWS", "StepFuctions", "Distributed MAP", "无服务器", "云计算"]
+categories: ["云架构"]
+---
 ### **AWS Step Functions Distributed Map 生产环境实践指南**
 
 ---
