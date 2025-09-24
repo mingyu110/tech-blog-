@@ -1,4 +1,5 @@
 ---
+title: 在 Amazon SageMaker 上进行LLM大语言模型训练
 author: mingyu110
 date: 2025-09-25
 description: 本文档为在 Amazon SageMaker 平台进行大规模语言模型（LLM）训练提供了一套全面的最佳实践指南，内容涵盖技术原理、应用场景、计算、存储、网络、弹性等关键环节。
@@ -10,7 +11,7 @@ tags:
   - 最佳实践
 type: 机器学习、深度学习、人工智能
 ---
-# 在 Amazon SageMaker 上训练大型语言模型
+# 在 Amazon SageMaker 上进行LLM大语言模型训练
 
 本文档旨在为在 Amazon SageMaker 平台进行大规模语言模型（LLM）训练提供一套全面的最佳实践指南。内容涵盖从技术原理、应用场景到实际生产落地中需要考虑的计算、存储、网络、弹性等关键环节，并提供必要的参考资料和常见问题解答。
 
