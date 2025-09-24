@@ -36,7 +36,7 @@ LLM 的模型大小和训练数据量是一把双刃剑：它带来了卓越的�
 
 下图展示了一个在 k*3 台服务器（每台服务器 8 个 GPU）上训练一个 6 层模型的 3D 并行训练示例。数据并行度为 k，流水线并行度为 6，张量并行度为 4。集群中的每个 GPU 包含模型层的四分之一，一个完整的模型被分区到三台服务器上（共 24 个 GPU）。
 
-![3D 并行神经网络训练图示](/Users/jinxunliu/Desktop/ml-12814-diagram2.png)
+![3D 并行神经网络训练图示](/images/ml-12814-diagram2.png)
 
 ### 1.4 核心技术原理：高性能网络通信
 
@@ -48,7 +48,7 @@ Elastic Fabric Adapter (EFA) 是一种可附加到 Amazon EC2 实例的网络设
 
 其核心优势源于 **操作系统旁路 (OS-bypass)** 机制。如下图所示，传统网络堆栈中，用户空间的应用（如 MPI, NCCL）需通过操作系统内核的 TCP/IP 协议栈与网络硬件通信。而 EFA 允许这些应用通过 **Libfabric API** 直接与 EFA 硬件设备通信，绕过了内核，从而显著减少了开销，提升了通信效率。
 
-![传统 HPC 堆栈与使用 EFA 的堆栈对比](/Users/jinxunliu/Desktop/efa_stack.png)
+![传统 HPC 堆栈与使用 EFA 的堆栈对比](/images/efa_stack.png)
 
 EFA 底层使用 **可扩展可靠数据报 (Scalable Reliable Datagram, SRD)** 协议，专为大规模云环境设计，提供可靠的、拥塞控制的传输。
 
