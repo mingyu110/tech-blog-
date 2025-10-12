@@ -1,4 +1,5 @@
 ---
+title: 使用 AWS CodeDeploy 实现 EC2 自动化部署与优雅停机实践指南
 author: mingyu110
 date: 2025-10-12
 description: 本实践指南深入探讨了如何利用AWS CodeDeploy实现Amazon EC2实例的自动化部署流程，并确保在部署过程中的服务优雅停机，从而最大限度地减少服务中断时间，提升应用发布的安全性和可靠性。
