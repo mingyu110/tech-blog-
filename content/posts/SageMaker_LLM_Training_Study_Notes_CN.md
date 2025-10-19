@@ -1,3 +1,12 @@
+---
+title: AWS SageMaker 大语言模型（LLM）训练学习笔记
+description: 本笔记提炼了关于如何使用Amazon SageMaker进行可扩展、高效的大规模机器学习模型（特别是LLM）训练的核心挑战、关键特性、优化技术和最佳实践。
+keywords: [AWS, SageMaker, LLM, 大语言模型, 分布式训练, Smart Sifting, Cluster Repair, LMI, 模型优化]
+category: AWS Machine Learning
+date: 2025-10-19
+author: mingyu110
+---
+
 # AWS SageMaker 大语言模型（LLM）训练学习笔记
 
 ## 核心摘要
