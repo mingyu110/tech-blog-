@@ -1,19 +1,20 @@
 ---
+​---
 title: Fargate STOPSIGNAL技术文档 - 容器的优雅停止
 date: 2025-12-15
 author: Jackliu110
 category: DevSecOps
 tags:
-
   - AWS Fargate
   - 容器
   - STOPSIGNAL
   - 优雅停止
   - DevSecOps
   - 云原生
-    description: 详细讲解AWS Fargate中STOPSIGNAL的使用方法，以及如何实现容器的优雅停止，保障应用服务的稳定性。
-    lang: zh-CN
-    draft: false
+description: 详细讲解AWS Fargate中STOPSIGNAL的使用方法，以及如何实现容器的优雅停止，保障应用服务的稳定性。
+lang: zh-CN
+draft: false
+​---
 ---
 
 # Fargate STOPSIGNAL 技术文档
