@@ -1,0 +1,532 @@
+<!doctype html><html lang=zh-cn><head><meta charset=UTF-8><script src=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js></script><meta name=viewport content="width=device-width,initial-scale=1"><title>FastAPI 驱动的 Amazon Bedrock 代理服务：架构设计与实现 - 技术博客</title>
+<meta name=description content="我的技术博客"><link rel=icon href=/tech-blog-/favicon.ico><style>:root{--primary-color:#0066cc;--text-color:#333;--background-color:#fff;--secondary-background:#f5f5f5;--border-color:#eaeaea;--link-color:#0066cc;--link-hover-color:#004080;--code-background:#f5f5f5;--code-color:#d63384;--blockquote-border:#ddd;--blockquote-background:#f9f9f9;--header-background:rgba(255, 255, 255, 0.95);--footer-background:#f5f5f5;--max-width:800px}[data-theme=dark]{--primary-color:#3d91ff;--text-color:#e0e0e0;--background-color:#1a1a1a;--secondary-background:#2a2a2a;--border-color:#383838;--link-color:#3d91ff;--link-hover-color:#66a6ff;--code-background:#2d2d2d;--code-color:#ff7b9d;--blockquote-border:#555;--blockquote-background:#2d2d2d;--header-background:rgba(26, 26, 26, 0.95);--footer-background:#222}*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,segoe ui,Roboto,Oxygen,Ubuntu,Cantarell,open sans,helvetica neue,sans-serif;line-height:1.6;color:var(--text-color);background-color:var(--background-color);transition:background-color .3s,color .3s}a{color:var(--link-color);text-decoration:none;transition:color .2s}a:hover{color:var(--link-hover-color)}img{max-width:100%;height:auto}.header{background-color:var(--header-background);padding:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1);position:sticky;top:0;z-index:100;backdrop-filter:blur(5px)}.header-container,.main-container,.footer-container{max-width:var(--max-width);margin:0 auto;padding:0 1.5rem}.header-content{display:flex;justify-content:space-between;align-items:center}.logo a{font-size:1.5rem;font-weight:700;color:var(--text-color)}.navbar{display:flex;align-items:center;gap:1.5rem}.navbar a{color:var(--text-color);font-weight:500}.navbar a:hover{color:var(--primary-color)}.theme-toggle,.menu-toggle{background:0 0;border:none;cursor:pointer;color:var(--text-color);font-size:1.2rem;display:flex;align-items:center;justify-content:center;padding:.25rem}.menu-toggle{display:none}.main{padding:3rem 0;min-height:calc(100vh - 130px)}.footer{background-color:var(--footer-background);padding:2rem 0;font-size:.9rem;color:var(--text-color)}.footer-content{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.social-links{display:flex;gap:1rem}.social-links a{color:var(--text-color);transition:color .2s}.social-links a:hover{color:var(--primary-color)}@media(max-width:768px){.menu-toggle{display:flex}.navbar{position:fixed;top:60px;left:0;right:0;background-color:var(--header-background);flex-direction:column;align-items:flex-start;padding:1rem;box-shadow:0 4px 6px rgba(0,0,0,.1);transform:translateY(-200%);transition:transform .3s ease}.navbar.active{transform:translateY(0)}.navbar a{padding:.5rem 0}.header-content{flex-wrap:wrap}}</style></head><body><header class=header><div class=header-container><div class=header-content><div class=logo><a href=https://mingyu110.github.io/tech-blog-/>技术博客</a></div><button class=menu-toggle aria-label="Toggle menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><nav class=navbar><a href=/tech-blog-/posts/>文章</a>
+<a href=/tech-blog-/tags/>标签</a>
+<a href=/tech-blog-/categories/>分类</a>
+<a href=/tech-blog-/about/>关于</a>
+<button class=theme-toggle aria-label="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button></nav></div></div></header><main class=main><div class=main-container><article class=post><header class=post-header><h1 class=post-title>FastAPI 驱动的 Amazon Bedrock 代理服务：架构设计与实现</h1><div class=post-meta><time datetime=2025-12-21T00:00:00Z>December 21, 2025</time><div class=post-categories><a href=/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/ class=post-category>技术分享</a></div></div></header><div class=post-content><h1 id=fastapi-驱动的-amazon-bedrock-代理服务架构设计与实现>FastAPI 驱动的 Amazon Bedrock 代理服务：架构设计与实现</h1><p>本文将介绍一个基于 FastAPI 的轻量级代理服务，它将 Amazon Bedrock 的强大功能封装在简洁的 HTTP API 背后。我们将深入探讨 FastAPI 的核心原理与优势，并详细说明为什么选择 FastAPI 作为此项目的 Web 框架。</p><p><strong>项目地址</strong>：https://github.com/mingyu110/AI/tree/main/bedrock-proxy</p><h2 id=一fastapi-框架现代-python-web-开发的优选方案>一、FastAPI 框架：现代 Python Web 开发的优选方案</h2><h3 id=11-fastapi-的核心原理>1.1 FastAPI 的核心原理</h3><p>FastAPI 是一个现代、高性能的 Python Web 框架，基于以下关键技术构建：</p><ul><li><strong>Starlette</strong>：提供 ASGI 支持和 Web 框架基础功能</li><li><strong>Pydantic</strong>：提供数据验证和序列化</li><li><strong>类型提示</strong>：利用 Python 3.6+ 的类型注解实现自动数据验证和文档生成</li></ul><p>FastAPI 的核心工作原理可以概括为：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># FastAPI 自动处理请求-响应循环</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 1. 接收 HTTP 请求</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 2. 验证请求数据（基于 Pydantic 模型）</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 3. 执行业务逻辑</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 4. 序列化响应数据</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 5. 返回 HTTP 响应</span>
+</span></span></code></pre></div><h3 id=12-fastapi-的核心功能特性>1.2 FastAPI 的核心功能特性</h3><h4 id=121-自动-api-文档生成>1.2.1 自动 API 文档生成</h4><p>FastAPI 最强大的特性之一是能够自动生成 OpenAPI 规范的交互式文档：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 访问 /docs 路径即可获得 Swagger UI 界面</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 访问 /redoc 路径可获得 ReDoc 界面</span>
+</span></span></code></pre></div><h4 id=122-类型安全与自动验证>1.2.2 类型安全与自动验证</h4><p>利用 Python 类型提示，FastAPI 在运行时自动验证请求和响应数据：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>from</span> pydantic <span style=color:#f92672>import</span> BaseModel
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> typing <span style=color:#f92672>import</span> List, Optional
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>ChatRequest</span>(BaseModel):
+</span></span><span style=display:flex><span>    mode: str <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;chat&#34;</span>
+</span></span><span style=display:flex><span>    model: Optional[str] <span style=color:#f92672>=</span> <span style=color:#66d9ef>None</span>
+</span></span><span style=display:flex><span>    payload: dict
+</span></span><span style=display:flex><span>    stream: bool <span style=color:#f92672>=</span> <span style=color:#66d9ef>False</span>
+</span></span></code></pre></div><h4 id=123-异步高性能>1.2.3 异步高性能</h4><p>基于 asyncio 和 ASGI，FastAPI 能够处理大量并发请求：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 支持 async/await 语法</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>handle_request</span>(request: Request):
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 非阻塞 IO 操作</span>
+</span></span><span style=display:flex><span>    result <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> external_service<span style=color:#f92672>.</span>call()
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> result
+</span></span></code></pre></div><h4 id=124-依赖注入系统>1.2.4 依赖注入系统</h4><p>FastAPI 提供优雅的依赖注入机制，便于管理共享资源：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 共享 Bedrock 客户端实例</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>get_bedrock_client</span>() <span style=color:#f92672>-&gt;</span> boto3<span style=color:#f92672>.</span>client:
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 单例模式创建客户端</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>pass</span>
+</span></span></code></pre></div><h2 id=二为什么选择-fastapi-作为-bedrock-代理框架>二、为什么选择 FastAPI 作为 Bedrock 代理框架</h2><h3 id=21-性能考量应对-ai-推理的高延迟场景>2.1 性能考量：应对 AI 推理的高延迟场景</h3><p>Amazon Bedrock 调用通常存在较高延迟（100-2000ms），使用 FastAPI 的异步特性可以：</p><ul><li><strong>避免请求阻塞</strong>：当一个请求在等待 Bedrock 响应时，服务器可以处理其他请求</li><li><strong>支持高并发</strong>：单进程可处理数百个并发连接</li><li><strong>资源高效利用</strong>：非阻塞 IO 减少线程上下文切换开销</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 在传统同步框架中</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 每个请求占用一个线程，线程池耗尽后无法处理新请求</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 在 FastAPI 异步模式中</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 单个线程可处理多个并发请求，通过事件循环调度</span>
+</span></span></code></pre></div><h3 id=22-开发效率快速迭代-ai-应用>2.2 开发效率：快速迭代 AI 应用</h3><h4 id=221-自动生成的-api-文档>2.2.1 自动生成的 API 文档</h4><p>团队成员可以直接通过浏览器测试 API，无需额外工具：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 启动服务后访问 http://localhost:8000/docs</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 即可看到完整的 API 文档和测试界面</span>
+</span></span></code></pre></div><h4 id=222-类型安全减少错误>2.2.2 类型安全减少错误</h4><p>在构建复杂的 AI 请求负载时，类型提示能及早发现错误：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 错误示例：将字符串传入需要字典的字段</span>
+</span></span><span style=display:flex><span>payload <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;text content&#34;</span>  <span style=color:#75715e># 类型错误将在开发时被发现</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 正确示例</span>
+</span></span><span style=display:flex><span>payload <span style=color:#f92672>=</span> {<span style=color:#e6db74>&#34;messages&#34;</span>: [{<span style=color:#e6db74>&#34;role&#34;</span>: <span style=color:#e6db74>&#34;user&#34;</span>, <span style=color:#e6db74>&#34;content&#34;</span>: <span style=color:#e6db74>&#34;text&#34;</span>}]}
+</span></span></code></pre></div><h3 id=23-生态系统集成>2.3 生态系统集成</h3><p>FastAPI 与现代 Python 工具链无缝集成：</p><ul><li><strong>boto3</strong>：AWS SDK 的异步兼容</li><li><strong>Pydantic</strong>：与 Bedrock 的 JSON 请求/响应完美匹配</li><li><strong>pytest</strong>：支持异步测试</li><li><strong>Docker</strong>：轻量化容器部署</li></ul><h3 id=24-项目长期可维护性>2.4 项目长期可维护性</h3><h4 id=241-清晰的代码结构>2.4.1 清晰的代码结构</h4><pre tabindex=0><code>api/          # HTTP 层：路由、请求处理
+├── main.py          # FastAPI 应用实例
+├── chat_handler.py  # 请求路由和编排
+└── response.py      # 响应辅助函数
+
+core/         # 核心层：配置、客户端
+├── settings.py      # 集中配置管理
+└── bedrock_client.py # 共享 Bedrock 客户端
+
+services/     # 服务层：业务逻辑
+├── chat_service.py      # 聊天服务
+└── embedding_service.py # 嵌入服务
+</code></pre><h4 id=242-配置集中管理>2.4.2 配置集中管理</h4><p>所有配置集中在 <code>core/settings.py</code>，便于管理和修改：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#a6e22e>@dataclass</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>AppSettings</span>:
+</span></span><span style=display:flex><span>    aws_region: str <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;us-east-1&#34;</span>
+</span></span><span style=display:flex><span>    bedrock_model_id: str <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;anthropic.claude-3-sonnet-20240229-v1:0&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 修改一处，全局生效</span>
+</span></span></code></pre></div><h2 id=三bedrock-代理服务核心架构>三、Bedrock 代理服务核心架构</h2><h3 id=31-整体架构概览>3.1 整体架构概览</h3><pre tabindex=0><code>┌─────────────────┐     HTTP     ┌─────────────────┐    AWS SDK     ┌─────────────────┐
+│   您的应用      │ ───────────→ │  FastAPI 代理   │ ───────────→ │ Amazon Bedrock  │
+│ (Web/移动/API)  │   /chat      │  (本服务)       │ boto3        │  (AI 服务)      │
+└─────────────────┘              └─────────────────┘              └─────────────────┘
+        ↑                                ↑
+        │ 无需 AWS SDK                    │ 统一错误处理
+        │ 无需管理凭据                    │ 连接池复用
+        │ 简单 HTTP                       │ 自动重试
+</code></pre><h3 id=32-fastapi-应用核心结构>3.2 FastAPI 应用核心结构</h3><h4 id=321-应用入口-apimainpy>3.2.1 应用入口 (api/main.py)</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>from</span> fastapi <span style=color:#f92672>import</span> FastAPI, Request
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> fastapi.middleware.cors <span style=color:#f92672>import</span> CORSMiddleware
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>app <span style=color:#f92672>=</span> FastAPI(
+</span></span><span style=display:flex><span>    title<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;Amazon Bedrock 代理服务&#34;</span>,
+</span></span><span style=display:flex><span>    description<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;统一的 HTTP API 接口，用于访问 Bedrock 的聊天和嵌入功能&#34;</span>,
+</span></span><span style=display:flex><span>    version<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;1.0.0&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># CORS 配置，支持前端跨域调用</span>
+</span></span><span style=display:flex><span>app<span style=color:#f92672>.</span>add_middleware(
+</span></span><span style=display:flex><span>    CORSMiddleware,
+</span></span><span style=display:flex><span>    allow_origins<span style=color:#f92672>=</span>[<span style=color:#e6db74>&#34;*&#34;</span>],  <span style=color:#75715e># 生产环境应配置具体域名</span>
+</span></span><span style=display:flex><span>    allow_credentials<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>,
+</span></span><span style=display:flex><span>    allow_methods<span style=color:#f92672>=</span>[<span style=color:#e6db74>&#34;*&#34;</span>],
+</span></span><span style=display:flex><span>    allow_headers<span style=color:#f92672>=</span>[<span style=color:#e6db74>&#34;*&#34;</span>],
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.post</span>(<span style=color:#e6db74>&#34;/chat&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat</span>(request: Request):
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;统一的聊天和嵌入接口&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    body <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> request<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> handle_chat_request(body)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.get</span>(<span style=color:#e6db74>&#34;/health&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>health</span>():
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;健康检查端点&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> {<span style=color:#e6db74>&#34;status&#34;</span>: <span style=color:#e6db74>&#34;ok&#34;</span>, <span style=color:#e6db74>&#34;service&#34;</span>: <span style=color:#e6db74>&#34;bedrock-proxy&#34;</span>}
+</span></span></code></pre></div><h4 id=322-请求处理核心-apichat_handlerpy>3.2.2 请求处理核心 (api/chat_handler.py)</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>handle_chat_request</span>(body: Dict[str, Any]) <span style=color:#f92672>-&gt;</span> JSONResponse <span style=color:#f92672>|</span> StreamingResponse:
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    主要路由逻辑：
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    1. 判断模式：chat（聊天）还是 embed（嵌入）
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    2. 判断响应方式：流式还是非流式
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    3. 调用相应的服务
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    4. 返回格式化的响应
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    mode <span style=color:#f92672>=</span> body<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;mode&#34;</span>, <span style=color:#e6db74>&#34;chat&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> mode <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;embed&#34;</span>:
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 处理嵌入请求</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> handle_embedding(body)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 处理聊天请求</span>
+</span></span><span style=display:flex><span>        stream <span style=color:#f92672>=</span> body<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;stream&#34;</span>, <span style=color:#66d9ef>False</span>)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> stream:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> handle_streaming_chat(body)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> handle_sync_chat(body)
+</span></span></code></pre></div><h3 id=33-bedrock-客户端管理-corebedrock_clientpy>3.3 Bedrock 客户端管理 (core/bedrock_client.py)</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>get_bedrock_client</span>() <span style=color:#f92672>-&gt;</span> boto3<span style=color:#f92672>.</span>client:
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    创建并复用 Bedrock 客户端实例
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    关键配置：
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    - max_pool_connections: 连接池大小（默认 50）
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    - retries: 自适应重试策略
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    - region: AWS 区域
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>global</span> _bedrock_client
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> _bedrock_client <span style=color:#f92672>is</span> <span style=color:#66d9ef>None</span>:
+</span></span><span style=display:flex><span>        settings <span style=color:#f92672>=</span> AppSettings<span style=color:#f92672>.</span>instance()
+</span></span><span style=display:flex><span>        config <span style=color:#f92672>=</span> Config(
+</span></span><span style=display:flex><span>            region_name<span style=color:#f92672>=</span>settings<span style=color:#f92672>.</span>aws_region,
+</span></span><span style=display:flex><span>            max_pool_connections<span style=color:#f92672>=</span>settings<span style=color:#f92672>.</span>max_pool_connections,
+</span></span><span style=display:flex><span>            retries<span style=color:#f92672>=</span>{
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;max_attempts&#34;</span>: settings<span style=color:#f92672>.</span>max_retry_attempts,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;mode&#34;</span>: <span style=color:#e6db74>&#34;adaptive&#34;</span>
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        )
+</span></span><span style=display:flex><span>        _bedrock_client <span style=color:#f92672>=</span> boto3<span style=color:#f92672>.</span>client(
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;bedrock-runtime&#34;</span>,
+</span></span><span style=display:flex><span>            config<span style=color:#f92672>=</span>config
+</span></span><span style=display:flex><span>        )
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> _bedrock_client
+</span></span></code></pre></div><h3 id=34-聊天服务实现-serviceschat_servicepy>3.4 聊天服务实现 (services/chat_service.py)</h3><h4 id=341-同步聊天模式>3.4.1 同步聊天模式</h4><p>适用于不需要实时响应的场景：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat_sync</span>(self, body: dict) <span style=color:#f92672>-&gt;</span> dict:
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    同步聊天流程：
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    1. 准备请求负载
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    2. 调用 invoke_model
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    3. 解析响应
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    4. 返回完整结果
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    response <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>client<span style=color:#f92672>.</span>invoke_model(<span style=color:#f92672>**</span>invoke_kwargs)
+</span></span><span style=display:flex><span>    response_body <span style=color:#f92672>=</span> json<span style=color:#f92672>.</span>loads(response[<span style=color:#e6db74>&#34;body&#34;</span>]<span style=color:#f92672>.</span>read())
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> {
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;answer&#34;</span>: self<span style=color:#f92672>.</span>_extract_text(response_body),
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;usage&#34;</span>: response_body<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;usage&#34;</span>, {}),
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;model&#34;</span>: model_id
+</span></span><span style=display:flex><span>    }
+</span></span></code></pre></div><h4 id=342-流式聊天模式>3.4.2 流式聊天模式</h4><p>适用于需要实时显示生成内容的场景：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat_stream</span>(self, prepared: tuple):
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    流式聊天流程：
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    1. 准备请求负载
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    2. 调用 invoke_model_with_response_stream
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    3. 生成器逐块返回内容
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    4. 客户端实时接收并显示
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    response <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>client<span style=color:#f92672>.</span>invoke_model_with_response_stream(<span style=color:#f92672>**</span>invoke_kwargs)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>generate</span>():
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> event <span style=color:#f92672>in</span> response[<span style=color:#e6db74>&#34;body&#34;</span>]:
+</span></span><span style=display:flex><span>            chunk <span style=color:#f92672>=</span> json<span style=color:#f92672>.</span>loads(event[<span style=color:#e6db74>&#34;chunk&#34;</span>][<span style=color:#e6db74>&#34;bytes&#34;</span>])
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>yield</span> {
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;text&#34;</span>: chunk<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;text&#34;</span>, <span style=color:#e6db74>&#34;&#34;</span>),
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;is_final&#34;</span>: <span style=color:#66d9ef>False</span>
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> generate()
+</span></span></code></pre></div><h3 id=35-嵌入服务实现-servicesembedding_servicepy>3.5 嵌入服务实现 (services/embedding_service.py)</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>embed</span>(self, text: str, model_id: Optional[str] <span style=color:#f92672>=</span> <span style=color:#66d9ef>None</span>) <span style=color:#f92672>-&gt;</span> dict:
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    文本嵌入流程：
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    1. 构建请求负载（支持 Titan 和 Cohere）
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    2. 调用 invoke_model
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    3. 解析嵌入向量
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    4. 返回标准化格式
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    model <span style=color:#f92672>=</span> model_id <span style=color:#f92672>or</span> self<span style=color:#f92672>.</span>settings<span style=color:#f92672>.</span>bedrock_embed_model_id
+</span></span><span style=display:flex><span>    payload <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>_build_payload(text, model)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    response <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>client<span style=color:#f92672>.</span>invoke_model(
+</span></span><span style=display:flex><span>        modelId<span style=color:#f92672>=</span>model,
+</span></span><span style=display:flex><span>        body<span style=color:#f92672>=</span>json<span style=color:#f92672>.</span>dumps(payload),
+</span></span><span style=display:flex><span>        contentType<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;application/json&#34;</span>,
+</span></span><span style=display:flex><span>        accept<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;application/json&#34;</span>
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    body <span style=color:#f92672>=</span> json<span style=color:#f92672>.</span>loads(response[<span style=color:#e6db74>&#34;body&#34;</span>]<span style=color:#f92672>.</span>read())
+</span></span><span style=display:flex><span>    embedding <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>_parse_embedding(body, model)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> {
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;embedding&#34;</span>: embedding,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;dimensions&#34;</span>: len(embedding),
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;model&#34;</span>: model
+</span></span><span style=display:flex><span>    }
+</span></span></code></pre></div><h2 id=四配置管理最佳实践>四、配置管理最佳实践</h2><h3 id=41-环境变量驱动的配置>4.1 环境变量驱动的配置</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># core/settings.py</span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@dataclass</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>AppSettings</span>:
+</span></span><span style=display:flex><span>    <span style=color:#75715e># AWS 配置</span>
+</span></span><span style=display:flex><span>    aws_region: str <span style=color:#f92672>=</span> os<span style=color:#f92672>.</span>getenv(<span style=color:#e6db74>&#34;AWS_REGION&#34;</span>, <span style=color:#e6db74>&#34;us-east-1&#34;</span>)
+</span></span><span style=display:flex><span>    bedrock_model_id: str <span style=color:#f92672>=</span> os<span style=color:#f92672>.</span>getenv(
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;BEDROCK_MODEL_ID&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;anthropic.claude-3-sonnet-20240229-v1:0&#34;</span>
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Guardrails 配置</span>
+</span></span><span style=display:flex><span>    guardrail_id: Optional[str] <span style=color:#f92672>=</span> os<span style=color:#f92672>.</span>getenv(<span style=color:#e6db74>&#34;BEDROCK_GUARDRAIL_ID&#34;</span>)
+</span></span><span style=display:flex><span>    guardrail_version: str <span style=color:#f92672>=</span> os<span style=color:#f92672>.</span>getenv(<span style=color:#e6db74>&#34;BEDROCK_GUARDRAIL_VERSION&#34;</span>, <span style=color:#e6db74>&#34;1&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># HTTP 调优</span>
+</span></span><span style=display:flex><span>    max_pool_connections: int <span style=color:#f92672>=</span> int(os<span style=color:#f92672>.</span>getenv(<span style=color:#e6db74>&#34;MAX_POOL_CONNECTIONS&#34;</span>, <span style=color:#e6db74>&#34;50&#34;</span>))
+</span></span><span style=display:flex><span>    max_retry_attempts: int <span style=color:#f92672>=</span> int(os<span style=color:#f92672>.</span>getenv(<span style=color:#e6db74>&#34;MAX_RETRY_ATTEMPTS&#34;</span>, <span style=color:#e6db74>&#34;5&#34;</span>))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 单例模式，全局复用</span>
+</span></span><span style=display:flex><span>_settings <span style=color:#f92672>=</span> <span style=color:#66d9ef>None</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@classmethod</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>instance</span>(cls) <span style=color:#f92672>-&gt;</span> <span style=color:#e6db74>&#34;AppSettings&#34;</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> cls<span style=color:#f92672>.</span>_settings <span style=color:#f92672>is</span> <span style=color:#66d9ef>None</span>:
+</span></span><span style=display:flex><span>        cls<span style=color:#f92672>.</span>_settings <span style=color:#f92672>=</span> cls()
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> cls<span style=color:#f92672>.</span>_settings
+</span></span></code></pre></div><h3 id=42-env-文件示例>4.2 .env 文件示例</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># AWS 配置</span>
+</span></span><span style=display:flex><span>AWS_REGION<span style=color:#f92672>=</span>us-east-1
+</span></span><span style=display:flex><span>AWS_ACCESS_KEY_ID<span style=color:#f92672>=</span>your_access_key
+</span></span><span style=display:flex><span>AWS_SECRET_ACCESS_KEY<span style=color:#f92672>=</span>your_secret_key
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Bedrock 模型配置</span>
+</span></span><span style=display:flex><span>BEDROCK_MODEL_ID<span style=color:#f92672>=</span>anthropic.claude-3-sonnet-20240229-v1:0
+</span></span><span style=display:flex><span>BEDROCK_EMBED_MODEL_ID<span style=color:#f92672>=</span>amazon.titan-embed-text-v2:0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Guardrails（可选）</span>
+</span></span><span style=display:flex><span>BEDROCK_GUARDRAIL_ID<span style=color:#f92672>=</span>gr-xxxxxxxx
+</span></span><span style=display:flex><span>BEDROCK_GUARDRAIL_VERSION<span style=color:#f92672>=</span><span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># CORS 配置</span>
+</span></span><span style=display:flex><span>ALLOWED_ORIGINS<span style=color:#f92672>=</span>http://localhost:3000,https://your-app.com
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 性能调优</span>
+</span></span><span style=display:flex><span>MAX_POOL_CONNECTIONS<span style=color:#f92672>=</span><span style=color:#ae81ff>50</span>
+</span></span><span style=display:flex><span>MAX_RETRY_ATTEMPTS<span style=color:#f92672>=</span><span style=color:#ae81ff>5</span>
+</span></span></code></pre></div><h2 id=五部署与使用>五、部署与使用</h2><h3 id=51-本地开发环境>5.1 本地开发环境</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 1. 克隆项目</span>
+</span></span><span style=display:flex><span>git clone https://github.com/loaynaser3/bedrock-proxy.git
+</span></span><span style=display:flex><span>cd bedrock-proxy
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 2. 创建虚拟环境</span>
+</span></span><span style=display:flex><span>python -m venv venv
+</span></span><span style=display:flex><span>source venv/bin/activate  <span style=color:#75715e># Linux/Mac</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 或 venv\Scripts\activate  # Windows</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 3. 安装依赖</span>
+</span></span><span style=display:flex><span>pip install -r requirements.txt
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 4. 配置 AWS 凭据</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 方式 1: 使用 .env 文件</span>
+</span></span><span style=display:flex><span>cp .env.example .env
+</span></span><span style=display:flex><span><span style=color:#75715e># 编辑 .env 文件填写 AWS 凭据</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 方式 2: 使用 AWS CLI</span>
+</span></span><span style=display:flex><span>aws configure
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 5. 启动服务</span>
+</span></span><span style=display:flex><span>uvicorn api.main:app --host 0.0.0.0 --port <span style=color:#ae81ff>8000</span> --reload
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 6. 访问文档</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 浏览器打开: http://localhost:8000/docs</span>
+</span></span></code></pre></div><h3 id=52-docker-部署>5.2 Docker 部署</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-dockerfile data-lang=dockerfile><span style=display:flex><span><span style=color:#75715e># Dockerfile</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>FROM</span><span style=color:#e6db74> python:3.12-slim</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>WORKDIR</span><span style=color:#e6db74> /app</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>COPY</span> requirements.txt .<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> pip install --no-cache-dir -r requirements.txt<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>COPY</span> . .<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>EXPOSE</span><span style=color:#e6db74> 8000</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>CMD</span> [<span style=color:#e6db74>&#34;uvicorn&#34;</span>, <span style=color:#e6db74>&#34;api.main:app&#34;</span>, <span style=color:#e6db74>&#34;--host&#34;</span>, <span style=color:#e6db74>&#34;0.0.0.0&#34;</span>, <span style=color:#e6db74>&#34;--port&#34;</span>, <span style=color:#e6db74>&#34;8000&#34;</span>]<span style=color:#960050;background-color:#1e0010>
+</span></span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 构建镜像</span>
+</span></span><span style=display:flex><span>docker build -t bedrock-proxy .
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 运行容器</span>
+</span></span><span style=display:flex><span>docker run -d <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --name bedrock-proxy <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -p 8000:8000 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --env-file .env <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  bedrock-proxy
+</span></span></code></pre></div><h3 id=53-kubernetes-部署示例>5.3 Kubernetes 部署示例</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#75715e># k8s-deployment.yaml</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>apiVersion</span>: <span style=color:#ae81ff>apps/v1</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>kind</span>: <span style=color:#ae81ff>Deployment</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>name</span>: <span style=color:#ae81ff>bedrock-proxy</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>replicas</span>: <span style=color:#ae81ff>3</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>app</span>: <span style=color:#ae81ff>bedrock-proxy</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>app</span>: <span style=color:#ae81ff>bedrock-proxy</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>proxy</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>image</span>: <span style=color:#ae81ff>your-registry/bedrock-proxy:latest</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>ports</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#f92672>containerPort</span>: <span style=color:#ae81ff>8000</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>env</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>AWS_REGION</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>value</span>: <span style=color:#e6db74>&#34;us-east-1&#34;</span>
+</span></span><span style=display:flex><span>        - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>BEDROCK_MODEL_ID</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>value</span>: <span style=color:#e6db74>&#34;anthropic.claude-3-sonnet-20240229-v1:0&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>resources</span>:
+</span></span><span style=display:flex><span>          <span style=color:#f92672>requests</span>:
+</span></span><span style=display:flex><span>            <span style=color:#f92672>memory</span>: <span style=color:#e6db74>&#34;256Mi&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#f92672>cpu</span>: <span style=color:#e6db74>&#34;250m&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>limits</span>:
+</span></span><span style=display:flex><span>            <span style=color:#f92672>memory</span>: <span style=color:#e6db74>&#34;512Mi&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#f92672>cpu</span>: <span style=color:#e6db74>&#34;500m&#34;</span>
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span><span style=color:#f92672>apiVersion</span>: <span style=color:#ae81ff>v1</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>kind</span>: <span style=color:#ae81ff>Service</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>name</span>: <span style=color:#ae81ff>bedrock-proxy-service</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>app</span>: <span style=color:#ae81ff>bedrock-proxy</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>port</span>: <span style=color:#ae81ff>80</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>targetPort</span>: <span style=color:#ae81ff>8000</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>type</span>: <span style=color:#ae81ff>LoadBalancer</span>
+</span></span></code></pre></div><h2 id=六api-使用示例>六、API 使用示例</h2><h3 id=61-聊天补全同步模式>6.1 聊天补全（同步模式）</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> requests
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>response <span style=color:#f92672>=</span> requests<span style=color:#f92672>.</span>post(
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;http://localhost:8000/chat&#34;</span>,
+</span></span><span style=display:flex><span>    json<span style=color:#f92672>=</span>{
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;mode&#34;</span>: <span style=color:#e6db74>&#34;chat&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;model&#34;</span>: <span style=color:#e6db74>&#34;anthropic.claude-3-sonnet-20240229-v1:0&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;payload&#34;</span>: {
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;anthropic_version&#34;</span>: <span style=color:#e6db74>&#34;bedrock-2023-05-31&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;messages&#34;</span>: [
+</span></span><span style=display:flex><span>                {
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;role&#34;</span>: <span style=color:#e6db74>&#34;user&#34;</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;content&#34;</span>: [
+</span></span><span style=display:flex><span>                        {<span style=color:#e6db74>&#34;type&#34;</span>: <span style=color:#e6db74>&#34;text&#34;</span>, <span style=color:#e6db74>&#34;text&#34;</span>: <span style=color:#e6db74>&#34;解释 DevOps 概念&#34;</span>}
+</span></span><span style=display:flex><span>                    ]
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            ],
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;max_tokens&#34;</span>: <span style=color:#ae81ff>256</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>result <span style=color:#f92672>=</span> response<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;回答: </span><span style=color:#e6db74>{</span>result[<span style=color:#e6db74>&#39;answer&#39;</span>]<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;用量: </span><span style=color:#e6db74>{</span>result[<span style=color:#e6db74>&#39;usage&#39;</span>]<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span></code></pre></div><h3 id=62-流式聊天实时响应>6.2 流式聊天（实时响应）</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> requests
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> json
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>response <span style=color:#f92672>=</span> requests<span style=color:#f92672>.</span>post(
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;http://localhost:8000/chat&#34;</span>,
+</span></span><span style=display:flex><span>    json<span style=color:#f92672>=</span>{
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;mode&#34;</span>: <span style=color:#e6db74>&#34;chat&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;stream&#34;</span>: <span style=color:#66d9ef>True</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;model&#34;</span>: <span style=color:#e6db74>&#34;anthropic.claude-3-sonnet-20240229-v1:0&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;payload&#34;</span>: {
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;anthropic_version&#34;</span>: <span style=color:#e6db74>&#34;bedrock-2023-05-31&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;messages&#34;</span>: [
+</span></span><span style=display:flex><span>                {
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;role&#34;</span>: <span style=color:#e6db74>&#34;user&#34;</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;content&#34;</span>: <span style=color:#e6db74>&#34;写一段关于机器学习的介绍&#34;</span>
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            ],
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;max_tokens&#34;</span>: <span style=color:#ae81ff>512</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    stream<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 逐块接收并显示</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> line <span style=color:#f92672>in</span> response<span style=color:#f92672>.</span>iter_lines():
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> line:
+</span></span><span style=display:flex><span>        chunk <span style=color:#f92672>=</span> json<span style=color:#f92672>.</span>loads(line)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#e6db74>&#34;text&#34;</span> <span style=color:#f92672>in</span> chunk:
+</span></span><span style=display:flex><span>            print(chunk[<span style=color:#e6db74>&#34;text&#34;</span>], end<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>, flush<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span></code></pre></div><h3 id=63-文本嵌入>6.3 文本嵌入</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> requests
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>response <span style=color:#f92672>=</span> requests<span style=color:#f92672>.</span>post(
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;http://localhost:8000/chat&#34;</span>,
+</span></span><span style=display:flex><span>    json<span style=color:#f92672>=</span>{
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;mode&#34;</span>: <span style=color:#e6db74>&#34;embed&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;model&#34;</span>: <span style=color:#e6db74>&#34;amazon.titan-embed-text-v2:0&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;text&#34;</span>: <span style=color:#e6db74>&#34;这是一个测试句子&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>result <span style=color:#f92672>=</span> response<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;嵌入维度: </span><span style=color:#e6db74>{</span>result[<span style=color:#e6db74>&#39;dimensions&#39;</span>]<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;前5个值: </span><span style=color:#e6db74>{</span>result[<span style=color:#e6db74>&#39;embedding&#39;</span>][:<span style=color:#ae81ff>5</span>]<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span></code></pre></div><h2 id=七产品级增强建议>七、产品级增强建议</h2><h3 id=71-认证与授权>7.1 认证与授权</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 添加 API Key 认证</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> fastapi.security <span style=color:#f92672>import</span> HTTPBearer, HTTPAuthorizationCredentials
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>security <span style=color:#f92672>=</span> HTTPBearer()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>verify_api_key</span>(credentials: HTTPAuthorizationCredentials <span style=color:#f92672>=</span> Depends(security)):
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> credentials<span style=color:#f92672>.</span>credentials <span style=color:#f92672>not</span> <span style=color:#f92672>in</span> VALID_API_KEYS:
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>raise</span> HTTPException(status_code<span style=color:#f92672>=</span><span style=color:#ae81ff>401</span>, detail<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;Invalid API Key&#34;</span>)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> credentials<span style=color:#f92672>.</span>credentials
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.post</span>(<span style=color:#e6db74>&#34;/chat&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat</span>(request: Request, api_key: str <span style=color:#f92672>=</span> Depends(verify_api_key)):
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 业务逻辑</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>pass</span>
+</span></span></code></pre></div><h3 id=72-速率限制>7.2 速率限制</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>from</span> fastapi_limiter <span style=color:#f92672>import</span> FastAPILimiter
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> fastapi_limiter.depends <span style=color:#f92672>import</span> RateLimiter
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.post</span>(<span style=color:#e6db74>&#34;/chat&#34;</span>, dependencies<span style=color:#f92672>=</span>[Depends(RateLimiter(times<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span>, seconds<span style=color:#f92672>=</span><span style=color:#ae81ff>60</span>))])
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat</span>(request: Request):
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 每个用户每分钟最多 10 次请求</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>pass</span>
+</span></span></code></pre></div><h3 id=73-请求日志与监控>7.3 请求日志与监控</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> logging
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> datetime <span style=color:#f92672>import</span> datetime
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>logging<span style=color:#f92672>.</span>basicConfig(
+</span></span><span style=display:flex><span>    level<span style=color:#f92672>=</span>logging<span style=color:#f92672>.</span>INFO,
+</span></span><span style=display:flex><span>    format<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;</span><span style=color:#e6db74>%(asctime)s</span><span style=color:#e6db74> - </span><span style=color:#e6db74>%(name)s</span><span style=color:#e6db74> - </span><span style=color:#e6db74>%(levelname)s</span><span style=color:#e6db74> - </span><span style=color:#e6db74>%(message)s</span><span style=color:#e6db74>&#39;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>logger <span style=color:#f92672>=</span> logging<span style=color:#f92672>.</span>getLogger(__name__)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.middleware</span>(<span style=color:#e6db74>&#34;http&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>log_requests</span>(request: Request, call_next):
+</span></span><span style=display:flex><span>    start_time <span style=color:#f92672>=</span> datetime<span style=color:#f92672>.</span>now()
+</span></span><span style=display:flex><span>    response <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> call_next(request)
+</span></span><span style=display:flex><span>    duration <span style=color:#f92672>=</span> (datetime<span style=color:#f92672>.</span>now() <span style=color:#f92672>-</span> start_time)<span style=color:#f92672>.</span>total_seconds()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    logger<span style=color:#f92672>.</span>info(
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{</span>request<span style=color:#f92672>.</span>method<span style=color:#e6db74>}</span><span style=color:#e6db74> </span><span style=color:#e6db74>{</span>request<span style=color:#f92672>.</span>url<span style=color:#f92672>.</span>path<span style=color:#e6db74>}</span><span style=color:#e6db74> &#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;Status: </span><span style=color:#e6db74>{</span>response<span style=color:#f92672>.</span>status_code<span style=color:#e6db74>}</span><span style=color:#e6db74> &#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;Duration: </span><span style=color:#e6db74>{</span>duration<span style=color:#e6db74>:</span><span style=color:#e6db74>.3f</span><span style=color:#e6db74>}</span><span style=color:#e6db74>s&#34;</span>
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> response
+</span></span></code></pre></div><h3 id=74-缓存策略>7.4 缓存策略</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>from</span> functools <span style=color:#f92672>import</span> lru_cache
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@lru_cache</span>(maxsize<span style=color:#f92672>=</span><span style=color:#ae81ff>128</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>get_embedding_cached</span>(text: str, model: str):
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 缓存频繁请求的嵌入结果</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> embedding_service<span style=color:#f92672>.</span>embed(text, model)
+</span></span></code></pre></div><h3 id=75-负载均衡与高可用>7.5 负载均衡与高可用</h3><p>在生产环境建议：</p><ol><li><strong>部署多个实例</strong>：使用 Kubernetes 或 ECS 部署 3+ 实例</li><li><strong>配置健康检查</strong>：定期探测 /health 端点</li><li><strong>自动扩缩容</strong>：根据 CPU/内存指标自动调整实例数</li><li><strong>使用 ALB</strong>：AWS Application Load Balancer 分发流量</li></ol><h2 id=八为什么选择代理架构>八、为什么选择代理架构</h2><h3 id=81-安全性优势>8.1 安全性优势</h3><p><strong>传统直接访问模式：</strong></p><pre tabindex=0><code>前端/移动端 → 暴露 AWS 凭据 → 直接调用 Bedrock
+❌ 凭据泄露风险
+❌ 无法控制访问权限
+❌ 难以审计使用量
+</code></pre><p><strong>代理模式：</strong></p><pre tabindex=0><code>前端/移动端 → HTTP 调用 → FastAPI 代理 → 安全凭据 → Bedrock
+✅ 凭据不暴露
+✅ 可添加自定义认证
+✅ 完整使用日志
+✅ 可实施速率限制
+</code></pre><h3 id=82-开发效率提升>8.2 开发效率提升</h3><table><thead><tr><th>对比项</th><th>直接调用 Bedrock</th><th>使用代理服务</th></tr></thead><tbody><tr><td>前端代码复杂度</td><td>需要 AWS SDK，处理认证</td><td>简单 HTTP 请求</td></tr><tr><td>多应用维护</td><td>各应用独立配置</td><td>统一配置</td></tr><tr><td>模型切换</td><td>每个应用修改代码</td><td>修改代理配置</td></tr><tr><td>错误处理</td><td>各自实现</td><td>统一处理</td></tr><tr><td>连接池管理</td><td>各自实现</td><td>集中优化</td></tr></tbody></table><h3 id=83-可扩展性设计>8.3 可扩展性设计</h3><p>代理架构为 future enhancement 提供了扩展点：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 示例：添加自定义工具调用</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>CustomToolService</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> __init__(self, bedrock_client):
+</span></span><span style=display:flex><span>        self<span style=color:#f92672>.</span>client <span style=color:#f92672>=</span> bedrock_client
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>register_tool</span>(self, name: str, function: Callable):
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 注册自定义工具</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>execute_tool_call</span>(self, tool_call: dict):
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 执行工具调用</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 集成到 ChatService</span>
+</span></span><span style=display:flex><span>chat_service <span style=color:#f92672>=</span> ChatService(bedrock_client, settings)
+</span></span><span style=display:flex><span>chat_service<span style=color:#f92672>.</span>tool_executor <span style=color:#f92672>=</span> CustomToolService(bedrock_client)
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 示例：添加请求拦截器</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>RequestInterceptor</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>before_request</span>(self, request: dict):
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 日志记录</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 内容审核</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 格式转换</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>after_response</span>(self, response: dict):
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 结果缓存</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 后处理</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span></code></pre></div><h2 id=九性能优化技巧>九、性能优化技巧</h2><h3 id=91-连接池调优>9.1 连接池调优</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># core/bedrock_client.py</span>
+</span></span><span style=display:flex><span>config <span style=color:#f92672>=</span> Config(
+</span></span><span style=display:flex><span>    region_name<span style=color:#f92672>=</span>settings<span style=color:#f92672>.</span>aws_region,
+</span></span><span style=display:flex><span>    max_pool_connections<span style=color:#f92672>=</span><span style=color:#ae81ff>100</span>,  <span style=color:#75715e># 根据并发量调整</span>
+</span></span><span style=display:flex><span>    retries<span style=color:#f92672>=</span>{
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;max_attempts&#34;</span>: <span style=color:#ae81ff>3</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;mode&#34;</span>: <span style=color:#e6db74>&#34;adaptive&#34;</span>  <span style=color:#75715e># 自适应重试策略</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>)
+</span></span></code></pre></div><h3 id=92-流式响应优化>9.2 流式响应优化</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 设置合适的分块大小</span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.post</span>(<span style=color:#e6db74>&#34;/chat&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat</span>(request: Request):
+</span></span><span style=display:flex><span>    response <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> chat_service<span style=color:#f92672>.</span>chat_stream(prepared)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 使用 StreamingResponse 减少内存占用</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> StreamingResponse(
+</span></span><span style=display:flex><span>        response,
+</span></span><span style=display:flex><span>        media_type<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;application/x-ndjson&#34;</span>,
+</span></span><span style=display:flex><span>        headers<span style=color:#f92672>=</span>{
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;Cache-Control&#34;</span>: <span style=color:#e6db74>&#34;no-cache&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;X-Accel-Buffering&#34;</span>: <span style=color:#e6db74>&#34;no&#34;</span>  <span style=color:#75715e># 禁用代理缓冲</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    )
+</span></span></code></pre></div><h3 id=93-模型预热>9.3 模型预热</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 应用启动时预热连接</span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.on_event</span>(<span style=color:#e6db74>&#34;startup&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>startup_event</span>():
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 初始化 Bedrock 客户端</span>
+</span></span><span style=display:flex><span>    _ <span style=color:#f92672>=</span> get_bedrock_client()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 可选：发送一个测试请求预热模型</span>
+</span></span><span style=display:flex><span>    logger<span style=color:#f92672>.</span>info(<span style=color:#e6db74>&#34;Bedrock 代理服务启动完成&#34;</span>)
+</span></span></code></pre></div><h2 id=十总结>十、总结</h2><p>FastAPI 作为现代化 Python Web 框架，为构建 Amazon Bedrock 代理服务提供了理想的 foundation：</p><p><strong>技术优势：</strong></p><ul><li><strong>高性能</strong>：异步 IO 支持高并发，适合 AI 推理场景</li><li><strong>自动文档</strong>：Swagger UI 降低团队协作成本</li><li><strong>类型安全</strong>：Pydantic 模型确保数据完整性</li><li><strong>易于扩展</strong>：中间件和依赖注入支持业务需求演变</li><li><strong>轻量级</strong>：最小化运行时开销</li></ul><p><strong>业务价值：</strong></p><ul><li><strong>安全性</strong>：AWS 凭据不再暴露给前端</li><li><strong>一致性</strong>：统一模型配置和 Guardrails 策略</li><li><strong>可观测性</strong>：集中日志和监控</li><li><strong>简化开发</strong>：客户端无需 AWS SDK 知识</li></ul><p>通过本文介绍的架构，开发团队可以：</p><ol><li><strong>快速集成</strong>：任何支持 HTTP 的语言/框架均可调用</li><li><strong>专注业务</strong>：屏蔽 AWS SDK 实现细节</li><li><strong>灵活演进</strong>：在代理层添加新功能不影响客户端</li><li><strong>生产就绪</strong>：易于扩展认证、监控、缓存等企业级特性</li></ol><p>无论您是构建 AI 驱动的 Web 应用、移动应用还是微服务架构，这个 FastAPI + Amazon Bedrock 的代理模式都能显著提升开发效率和系统可维护性。</p><hr></div><div class=post-tags><span class=tags-title>Tags:</span><div class=tags-list><a href=/tags/fastapi/ class=post-tag>Fast API</a>
+<a href=/tags/amazon-bedrock/ class=post-tag>Amazon bedrock</a>
+<a href=/tags/python/ class=post-tag>Python</a>
+<a href=/tags/ai/ class=post-tag>Ai</a>
+<a href=/tags/%E4%BB%A3%E7%90%86%E6%9C%8D%E5%8A%A1/ class=post-tag>代理服务</a>
+<a href=/tags/aws/ class=post-tag>Aws</a></div></div><div class=post-navigation><div class="post-nav-item post-nav-prev"><span class=post-nav-label>Previous</span>
+<a href=https://mingyu110.github.io/tech-blog-/posts/python_sdk_best_practice/>Python SDK 开发最佳实践指南：以 AWS Bedrock AgentCore Memory 为例</a></div><div class="post-nav-item post-nav-next"><span class=post-nav-label>Next</span>
+<a href=https://mingyu110.github.io/tech-blog-/posts/2025-12-22-thingsboard-software-engineering-analysis/>开源IoT平台ThingsBoard 4.3.0-RC 软件工程技术分析</a></div></div></article><style>.post{max-width:800px;margin:0 auto;padding:2rem 0}.post-header{margin-bottom:2rem}.post-title{font-size:2.5rem;line-height:1.2;margin-bottom:1rem;font-weight:800}.post-meta{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;font-size:.95rem;color:var(--text-color);opacity:.7;margin-bottom:1rem}.post-author{font-style:italic}.post-categories{display:flex;flex-wrap:wrap;gap:.5rem}.post-category{padding:.2rem .6rem;border-radius:4px;background-color:var(--primary-color);color:#fff;font-size:.75rem;font-weight:500}.post-featured-image{margin-bottom:2rem;border-radius:8px;overflow:hidden}.post-featured-image img{width:100%;height:auto;display:block}.post-content{font-size:1.1rem;line-height:1.7;margin-bottom:3rem}.post-content p{margin-bottom:1.5rem}.post-content h2{font-size:1.8rem;margin:2.5rem 0 1rem}.post-content h3{font-size:1.5rem;margin:2rem 0 1rem}.post-content ul,.post-content ol{margin-bottom:1.5rem;padding-left:1.5rem}.post-content li{margin-bottom:.5rem}.post-content blockquote{margin:2rem 0;padding:1rem 1.5rem;border-left:4px solid var(--primary-color);background-color:var(--secondary-background);font-style:italic}.post-content img{max-width:100%;height:auto;border-radius:4px;margin:1.5rem 0}.post-content pre{background-color:var(--code-background);padding:1rem;border-radius:4px;overflow-x:auto;margin:1.5rem 0}.post-content code{font-family:sfmono-regular,Consolas,liberation mono,Menlo,monospace;font-size:.9rem;padding:.1rem .3rem;background-color:var(--code-background);border-radius:3px}.post-content pre code{padding:0;background-color:transparent}.post-tags{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:3rem;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color);padding:1.5rem 0}.tags-title{font-weight:600;margin-right:.5rem}.tags-list{display:flex;flex-wrap:wrap;gap:.5rem}.post-tag{padding:.2rem .6rem;border-radius:4px;background-color:var(--secondary-background);border:1px solid var(--border-color);font-size:.8rem;transition:background-color .2s}.post-tag:hover{background-color:var(--border-color)}.post-navigation{display:flex;justify-content:space-between;margin:3rem 0}.post-nav-item{max-width:45%}.post-nav-label{display:block;font-weight:600;font-size:.9rem;margin-bottom:.5rem;opacity:.7}.post-nav-prev{text-align:left}.post-nav-next{text-align:right}.post-comments{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-color)}.comments-title{font-size:1.5rem;margin-bottom:1.5rem}.comments-placeholder{text-align:center;padding:2rem;background-color:var(--secondary-background);border-radius:8px;font-style:italic;opacity:.8}@media(max-width:768px){.post{padding:1rem}.post-title{font-size:2rem}.post-meta{flex-direction:column;align-items:flex-start;gap:.5rem}.post-content{font-size:1rem}.post-navigation{flex-direction:column;gap:1.5rem}.post-nav-item{max-width:100%}}</style></div></main><footer class=footer><div class=footer-container><div class=footer-content><div class=copyright>&copy; 2026 技术博客. All rights reserved.</div><div class=social-links></div></div></div></footer><script>const themeToggle=document.querySelector(".theme-toggle"),prefersDarkScheme=window.matchMedia("(prefers-color-scheme: dark)"),currentTheme=localStorage.getItem("theme")||(prefersDarkScheme.matches?"dark":"light");currentTheme==="dark"&&(document.body.setAttribute("data-theme","dark"),themeToggle.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'),themeToggle.addEventListener("click",()=>{let e="light",t='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';!document.body.getAttribute("data-theme")||document.body.getAttribute("data-theme")==="light"?(document.body.setAttribute("data-theme","dark"),e="dark",t='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'):document.body.removeAttribute("data-theme"),localStorage.setItem("theme",e),themeToggle.innerHTML=t});const menuToggle=document.querySelector(".menu-toggle"),navbar=document.querySelector(".navbar");menuToggle.addEventListener("click",()=>{navbar.classList.toggle("active")}),document.addEventListener("click",e=>{!navbar.contains(e.target)&&!menuToggle.contains(e.target)&&navbar.classList.contains("active")&&navbar.classList.remove("active")})</script></body></html>

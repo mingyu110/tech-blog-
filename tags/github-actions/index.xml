@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>GitHub Actions on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/github-actions/</link><description>Recent content in GitHub Actions on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Wed, 14 May 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/github-actions/index.xml" rel="self" type="application/rss+xml"/><item><title>使用GitHub Actions构建AWS Lambda函数的安全部署流水线</title><link>https://mingyu110.github.io/tech-blog-/posts/lambda_github_actions_deployment/</link><pubDate>Wed, 14 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/lambda_github_actions_deployment/</guid><description>使用GitHub Actions构建AWS Lambda函数的安全部署流水线 详细代码示例可参考 GitHub 仓库
+引言 随着Serverless架构的广泛采用，AWS Lambda已成为构建微服务和事件驱动型应用的首选方案。然而，随着Lambda函数数量的增长，手动部署和更新这些函数变得既耗时又容易出错。本文介绍如何利用GitHub Actions构建一个安全、自动化的部署流水线，通过OpenID Connect (OIDC)身份验证来增强部署过程的安全性。
+为什么需要Lambda函数自动化部署 Serverless架构的普及 随着越来越多的企业采用Serverless函数计算方式构建应用系统，对自动化、安全和合规的部署方案需求日益增长：
+函数数量激增：现代应用可能包含数十甚至上百个独立Lambda函数，手动管理变得不切实际。
+频繁更新：微服务架构下，单个函数更新更加频繁，需要自动化流程支持快速迭代。
+环境一致性：需要确保在开发、测试和生产环境中函数部署的一致性。
+团队协作：多团队并行开发要求标准化的部署流程。
+传统部署方法的局限性 传统的Lambda部署方法存在几个明显缺陷：
+凭证管理风险：使用长期有效的访问密钥进行部署，增加了凭证泄露的风险。
+手动操作错误：人工干预过程容易引入配置错误。
+缺乏审计跟踪：难以追踪谁在何时进行了部署，不利于问题溯源。
+部署延迟：手动流程导致从代码提交到生产环境的时间延长。
+自动化部署的优势 通过GitHub Actions实现Lambda函数的自动化部署，可以带来以下优势：
+提高效率：减少人工干预，加快部署周期，使开发团队专注于业务价值。
+降低错误率：标准化部署流程，消除人为错误。
+可重复性：确保每次部署过程一致且可重复。
+及时反馈：部署问题能被及时发现并解决。
+可追溯性：每次部署都与特定代码提交关联，便于审计和回溯。
+为什么要将安全引入部署流程 安全挑战的增加 攻击面扩大：Serverless架构虽然简化了基础设施管理，但也引入了新的安全挑战。
+身份和访问管理：确保只有授权系统和人员能部署更新至生产环境。
+法规合规要求：各行业对云应用的合规要求日益严格，要求更安全的部署实践。
+安全集成的优势 安全左移：将安全考量融入开发周期的早期阶段，而非事后补救。
+自动化安全检查：在部署前自动进行代码扫描、依赖检查，提前发现漏洞。
+最小权限原则：确保部署过程只使用所需的最小权限，降低安全风险。
+安全审计：提供详细的部署记录，便于安全审计和合规验证。
+架构图 下面是使用GitHub Actions部署AWS Lambda函数的安全流水线架构：出于简化考虑，没有考虑流水线分支管理、CodeReview 等；可以自行根据需要添加即可
+实现步骤 第一阶段：AWS环境配置 1. 创建IAM身份提供商 在AWS控制台中创建OpenID Connect身份提供商：
+# 设置提供商参数 PROVIDER_URL=&amp;#34;https://token.actions.githubusercontent.com&amp;#34; AUDIENCE=&amp;#34;sts.amazonaws.com&amp;#34; 2. 创建IAM角色 创建具有Lambda部署权限的IAM角色，添加一个更全面的内联策略，允许创建和管理Lambda函数：
+{ &amp;#34;Version&amp;#34;: &amp;#34;2012-10-17&amp;#34;, &amp;#34;Statement&amp;#34;: [ { &amp;#34;Effect&amp;#34;: &amp;#34;Allow&amp;#34;, &amp;#34;Action&amp;#34;: [ &amp;#34;lambda:CreateFunction&amp;#34;, &amp;#34;lambda:UpdateFunctionCode&amp;#34;, &amp;#34;lambda:UpdateFunctionConfiguration&amp;#34;, &amp;#34;lambda:GetFunction&amp;#34;, &amp;#34;lambda:PublishVersion&amp;#34;, &amp;#34;lambda:CreateAlias&amp;#34;, &amp;#34;lambda:UpdateAlias&amp;#34;, &amp;#34;lambda:TagResource&amp;#34; ], &amp;#34;Resource&amp;#34;: &amp;#34;arn:aws:lambda:&amp;lt;region&amp;gt;:&amp;lt;account-id&amp;gt;:function:&amp;lt;function-name&amp;gt;&amp;#34; }, { &amp;#34;Effect&amp;#34;: &amp;#34;Allow&amp;#34;, &amp;#34;Action&amp;#34;: [ &amp;#34;iam:PassRole&amp;#34; ], &amp;#34;Resource&amp;#34;: &amp;#34;arn:aws:iam::&amp;lt;account-id&amp;gt;:role/lambda-execution-role&amp;#34;, &amp;#34;Condition&amp;#34;: { &amp;#34;StringEquals&amp;#34;: { &amp;#34;iam:PassedToService&amp;#34;: &amp;#34;lambda.</description></item></channel></rss>

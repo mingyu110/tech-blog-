@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>TroubleShooting on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/troubleshooting/</link><description>Recent content in TroubleShooting on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Wed, 17 Sep 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/troubleshooting/index.xml" rel="self" type="application/rss+xml"/><item><title>AWS负载均衡器误配置案例- 健康检查如何引发“账单剧增”</title><link>https://mingyu110.github.io/tech-blog-/posts/aws-load-balancer-misconfiguration-case-analysis/</link><pubDate>Wed, 17 Sep 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/aws-load-balancer-misconfiguration-case-analysis/</guid><description>AWS负载均衡器误配置案例- 健康检查如何引发“账单剧增” 1. 问题现象与定位思路 1.1. 问题现象 在一次常规的云成本审计中，我们发现了一个不好的趋势：AWS负载均衡器（ALB）的相关费用在短时间内翻了一番，其中**“Processed Bytes”（已处理字节数）**这一指标的增长尤为突出。然而，通过应用层的监控和API请求日志分析，我们确认面向用户的实际业务流量并没有相应规模的增长。
+这种“内部消耗”与“外部流量”之间的显著差异，是本次问题排查的核心线索。它明确指向一个假设：负载均衡器正在处理大量非用户请求的流量。
+1.2. 定位思路 面对这一现象，我们制定了如下的系统性排查思路：
+确认数据源：首先以云厂商的账单和用量报告为准，锁定费用增长的具体项目——ALB的ProcessedBytes。这为问题定下了基调：问题出在网络流量，而非计算或存储资源。
+流量归因分析：思考哪些流量会由ALB处理但并非源自最终用户。在典型的Web架构中，**健康检查（Health Check）**是最大嫌疑。它由负载均衡器自动、高频地发起，用以探测后端服务的可用性。
+审查配置：我们立即审查了ALB目标组（Target Group）的健康检查配置。果然，我们发现健康检查路径被设置为应用的主API端点 /。
+验证假设：该 / 端点会返回一个包含完整业务数据的JSON响应体，平均大小约为200KB。我们根据以下参数进行了流量估算：
+后端实例数：20个 健康检查频率：每5秒一次 单次请求负载：~200 KB 每日健康检查流量 ≈ 20个实例 × (3600秒/5秒)次/小时 × 24小时 × 200KB/次 ≈ 69.12 GB
+计算结果表明，仅健康检查一项每日就会产生近70GB的内部流量。这个惊人的数字完美解释了ProcessedBytes指标的异常飙升，并最终确认了问题根源。
+2. 问题根因与解决方案 2.1. 根因剖析 问题的根本原因在于将一个“重”业务端点错误地用于了“轻”探测任务。健康检查的本质是“心跳”，目的是以最低的成本快速判断服务是否“存活”，而非获取业务数据。使用返回完整JSON载荷的根路径 / 作为健康检查端点，违背了这一核心原则。每一次探测都变成了一次数据下载，在高频率、多实例的乘数效应下，其产生的流量和成本被急剧放大。
+2.2. 解决方案 解决方案分为两步：在应用层提供一个轻量级端点，并在基础设施层更新配置以使用它。
+步骤一：应用层改造 在应用程序中，我们增加一个专用的 /health 路由。该端点不执行任何数据库查询或复杂的业务逻辑，仅返回一个HTTP 200 OK 状态码和最简单的文本响应体，以表明服务进程正常运行。
+步骤二：基础设施层配置更新 在AWS控制台或通过基础设施即代码（IaC）工具，我们将ALB目标组的健康检查路径从 / 修改为 /health。
+3. 生产应用最佳实践 这个案例为我们提供了宝贵的生产实践经验：
+设计专用的健康检查端点
+保持轻量：端点应返回尽可能少的数据。一个200 OK状态码和几个字节的响应体（如&amp;quot;OK&amp;quot;）是理想选择。 区分“存活”与“就绪”：可以设计两个端点。一个/healthz（liveness）用于判断进程是否崩溃，一个/readyz（readiness）用于判断服务是否准备好接收流量（例如，数据库连接是否正常）。这与Kubernetes的理念一致，能实现更精细的流量控制和故障恢复。 避免外部依赖：健康检查端点应尽可能独立，避免调用其他微服务、数据库或缓存，以防这些外部依赖的抖动影响自身的健康状态，导致被错误地摘除流量。 将成本视为核心监控指标
+云账单和用量报告不仅是财务工具，更是强大的系统监控信号。应定期审计，并为关键服务的成本设立预算和告警（如使用AWS Budgets），以便在异常发生时第一时间获得通知。 杜绝“默认主义”</description></item></channel></rss>

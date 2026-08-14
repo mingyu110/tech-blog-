@@ -1,0 +1,769 @@
+<!doctype html><html lang=zh-cn><head><meta charset=UTF-8><script src=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js></script><meta name=viewport content="width=device-width,initial-scale=1"><title>基于 AWS CodePipeline 和 CodeDeploy 结合 GitHub 实现 Gitflow 的渐进式发布 - 技术博客</title>
+<meta name=description content="详细介绍如何在AWS上使用CodePipeline和CodeDeploy，结合GitHub实现基于Gitflow分支策略的渐进式发布方案，适合小型开发团队的自动化CI/CD实践"><link rel=icon href=/tech-blog-/favicon.ico><style>:root{--primary-color:#0066cc;--text-color:#333;--background-color:#fff;--secondary-background:#f5f5f5;--border-color:#eaeaea;--link-color:#0066cc;--link-hover-color:#004080;--code-background:#f5f5f5;--code-color:#d63384;--blockquote-border:#ddd;--blockquote-background:#f9f9f9;--header-background:rgba(255, 255, 255, 0.95);--footer-background:#f5f5f5;--max-width:800px}[data-theme=dark]{--primary-color:#3d91ff;--text-color:#e0e0e0;--background-color:#1a1a1a;--secondary-background:#2a2a2a;--border-color:#383838;--link-color:#3d91ff;--link-hover-color:#66a6ff;--code-background:#2d2d2d;--code-color:#ff7b9d;--blockquote-border:#555;--blockquote-background:#2d2d2d;--header-background:rgba(26, 26, 26, 0.95);--footer-background:#222}*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,segoe ui,Roboto,Oxygen,Ubuntu,Cantarell,open sans,helvetica neue,sans-serif;line-height:1.6;color:var(--text-color);background-color:var(--background-color);transition:background-color .3s,color .3s}a{color:var(--link-color);text-decoration:none;transition:color .2s}a:hover{color:var(--link-hover-color)}img{max-width:100%;height:auto}.header{background-color:var(--header-background);padding:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1);position:sticky;top:0;z-index:100;backdrop-filter:blur(5px)}.header-container,.main-container,.footer-container{max-width:var(--max-width);margin:0 auto;padding:0 1.5rem}.header-content{display:flex;justify-content:space-between;align-items:center}.logo a{font-size:1.5rem;font-weight:700;color:var(--text-color)}.navbar{display:flex;align-items:center;gap:1.5rem}.navbar a{color:var(--text-color);font-weight:500}.navbar a:hover{color:var(--primary-color)}.theme-toggle,.menu-toggle{background:0 0;border:none;cursor:pointer;color:var(--text-color);font-size:1.2rem;display:flex;align-items:center;justify-content:center;padding:.25rem}.menu-toggle{display:none}.main{padding:3rem 0;min-height:calc(100vh - 130px)}.footer{background-color:var(--footer-background);padding:2rem 0;font-size:.9rem;color:var(--text-color)}.footer-content{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.social-links{display:flex;gap:1rem}.social-links a{color:var(--text-color);transition:color .2s}.social-links a:hover{color:var(--primary-color)}@media(max-width:768px){.menu-toggle{display:flex}.navbar{position:fixed;top:60px;left:0;right:0;background-color:var(--header-background);flex-direction:column;align-items:flex-start;padding:1rem;box-shadow:0 4px 6px rgba(0,0,0,.1);transform:translateY(-200%);transition:transform .3s ease}.navbar.active{transform:translateY(0)}.navbar a{padding:.5rem 0}.header-content{flex-wrap:wrap}}</style></head><body><header class=header><div class=header-container><div class=header-content><div class=logo><a href=https://mingyu110.github.io/tech-blog-/>技术博客</a></div><button class=menu-toggle aria-label="Toggle menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><nav class=navbar><a href=/tech-blog-/posts/>文章</a>
+<a href=/tech-blog-/tags/>标签</a>
+<a href=/tech-blog-/categories/>分类</a>
+<a href=/tech-blog-/about/>关于</a>
+<button class=theme-toggle aria-label="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button></nav></div></div></header><main class=main><div class=main-container><article class=post><header class=post-header><h1 class=post-title>基于 AWS CodePipeline 和 CodeDeploy 结合 GitHub 实现 Gitflow 的渐进式发布</h1><div class=post-meta><time datetime=2025-05-30T00:00:00Z>May 30, 2025</time><div class=post-categories><a href=/categories/aws/ class=post-category>Aws</a>
+<a href=/categories/devops/ class=post-category>Dev ops</a>
+<a href=/categories/%E4%BA%91%E6%9E%B6%E6%9E%84/ class=post-category>云架构</a></div></div></header><div class=post-content><h1 id=基于-aws-codepipeline-和-codedeploy-结合-github-实现-gitflow-的渐进式发布>基于 AWS CodePipeline 和 CodeDeploy 结合 GitHub 实现 Gitflow 的渐进式发布</h1><h3 id=1-引言>1. 引言</h3><h4 id=11-目的>1.1 目的</h4><p>本方案为一个小型开发团队提供一个标准的技术方案，用于在 AWS 上使用 CodePipeline 和 CodeDeploy，结合 GitHub 实现基于 Gitflow 分支策略的渐进式发布（Canary Release），并确保发布版本遵循语义化版本管理（Semantic Versioning）。方案适合小型项目，强调自动化、协作效率和低成本。</p><h4 id=12-背景>1.2 背景</h4><p>渐进式发布通过逐步向部分用户推出新版本，降低上线风险，适合微服务架构或高可用性需求。Gitflow 分支策略为小型团队提供清晰的协作框架，语义化版本管理确保版本号（如 v1.2.3）清晰反映变更类型。AWS CodePipeline 和 CodeDeploy 提供自动化 CI/CD 流水线，结合 GitHub 实现高效代码托管和触发。</p><h4 id=13-范围>1.3 范围</h4><ul><li>代码托管：GitHub，用于版本控制和协作。</li><li>分支策略：Gitflow，包含 <code>main</code>、<code>develop</code>、<code>feature/</code>*、<code>release/*</code> 和 <code>hotfix/*</code> 分支。</li><li>CI/CD 工具：AWS CodePipeline（流水线自动化）、CodeDeploy（渐进式部署）。</li><li>部署目标：Amazon ECS Fargate，运行简单的 Node.js 微服务。</li><li>版本管理：语义化版本（SemVer），通过 Git 标签触发发布。</li><li>团队规模：小型团队，需简单、可扩展的流程。</li></ul><h3 id=2-系统架构>2. 系统架构</h3><h4 id=21-架构概述>2.1 架构概述</h4><ul><li>GitHub：托管代码，管理 Gitflow 分支和语义化版本标签。</li><li>AWS CodePipeline：协调源代码拉取、构建和部署阶段，监控 GitHub 标签（如 V1.X.X）。</li><li>AWS CodeBuild：编译代码，生成 Docker 镜像并推送至 Amazon ECR。</li><li>AWS CodeDeploy：执行渐进式部署到 ECS Fargate，使用 Canary 配置（如 10% 流量 5 分钟后全切换）。</li><li>Amazon ECS Fargate：运行 Node.js 微服务，无需管理服务器。</li><li>Application Load Balancer (ALB)：分发流量，支持渐进式发布。</li><li>Amazon ECR：存储 Docker 镜像，提供容器镜像仓库服务。</li><li>Amazon S3：存储 CodePipeline 构建工件（如 appspec.yml、taskdef.json 等配置文件）。</li><li>Amazon CloudWatch：监控部署健康状态。</li></ul><h4 id=22-方案架构图>2.2 方案架构图</h4><p><img src=/images/enhanced_aws_architecture.png alt="AWS CodePipeline和CodeDeploy架构图"></p><h3 id=3gitflow-分支策略>3.Gitflow 分支策略</h3><p>采用简化的 Gitflow 分支策略，适合小型团队协作：</p><table><thead><tr><th>分支类型</th><th>描述</th><th>用途</th><th>生命周期</th></tr></thead><tbody><tr><td>main</td><td>生产就绪代码，仅包含已发布版本</td><td>打标签（如 v1.2.3），触发部署</td><td>长生命周期</td></tr><tr><td>develop</td><td>集成新功能和修复，反映下一版本状态</td><td>特性分支合并目标</td><td>长生命周期</td></tr><tr><td>feature/*</td><td>特性开发分支，如 feature/add-login</td><td>新功能开发，合并回 develop</td><td>短生命周期</td></tr><tr><td>release/*</td><td>发布准备分支，如 release/1.2.3</td><td>测试后合并到 main，打标签</td><td>短生命周期</td></tr><tr><td>hotfix/*</td><td>紧急生产修复分支，如 hotfix/1.2.4</td><td>快速修复，合并回 main 和 develop</td><td>短生命周期</td></tr></tbody></table><h4 id=31-分支工作流>3.1 分支工作流</h4><ul><li><p>日常开发：</p><ul><li>开发者从 develop 创建 feature/* 分支（如 feature/add-login）。</li><li>完成后提交 PR（Pull Request），经过代码审查后合并回 develop，删除分支。</li></ul></li><li><p>发布准备：</p><ul><li>从 develop 创建 release/1.2.3 分支，进行测试和微调。</li><li><strong>推荐方式（开启分支保护）</strong>：创建 PR 将 release 分支合并到 main，经过审查和CI检查后合并。</li><li><strong>备选方式（无分支保护）</strong>：直接合并到 main分支。</li><li>合并完成后打标签（如 git tag v1.2.3），推送到 GitHub。</li><li>将 main 的变更合并回 develop，保持分支同步。</li></ul></li><li><p>紧急修复：</p><ul><li>从 main 创建 hotfix/1.2.4 分支，修复问题。</li><li>通过 PR 或直接合并到 main，打新标签（如 v1.2.4），推送到 GitHub。</li><li>将修复合并回 develop，同步修复。</li></ul></li><li><p>分支保护策略：</p><ul><li><strong>main分支</strong>：强制要求 PR 审查、CI 检查通过、分支最新</li><li><strong>develop分支</strong>：要求 PR 审查，确保代码质量</li><li><strong>feature/release/hotfix分支</strong>：无特殊限制，便于开发和测试</li></ul></li><li><p>语义化版本：</p><ul><li><p>版本号遵循 MAJOR.MINOR.PATCH（如 1.2.3）：</p><ul><li>MAJOR：不兼容更改。</li><li>MINOR：向后兼容的新功能。</li><li>PATCH：向后兼容的错误修复。</li></ul></li><li><p>标签（如 v1.2.3）在 main 上创建，触发 CodePipeline。</p></li></ul></li></ul><h4 id=32gitflow-流程图>3.2GitFlow 流程图</h4><p>下图展示了完整的 GitFlow 分支策略与 AWS CI/CD 流水线的集成流程：</p><p><img src=/images/gitflow_cd_pipeline.png alt="GitFlow 与 AWS CI/CD 流程图"></p><p>该流程图清晰展示了：</p><ul><li><strong>分支管理</strong>：main、develop、feature、release、hotfix 分支之间的关系和合并流程</li><li><strong>CI/CD 触发</strong>：main 和 develop 分支的合并如何触发 AWS CodePipeline</li><li><strong>自动化流程</strong>：从代码提交到容器化部署的完整自动化流水线</li><li><strong>蓝绿部署</strong>：CodeDeploy 实现的蓝绿部署策略，确保零停机时间</li></ul><p>​ <img src=/images/%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%9C.jpg alt=运行结果></p><h3 id=4-技术实现实践步骤>4. 技术实现实践步骤</h3><p>演示代码和策略等配置在GitHub： <a href=https://github.com/mingyu110/my-microservice>演示项目地址</a></p><h4 id=41-开发环境设置>4.1 开发环境设置</h4><h5 id=411-github-仓库和-nodejs-微服务>4.1.1 GitHub 仓库和 Node.js 微服务</h5><ul><li><p>创建 GitHub 仓库：</p><ul><li><p>在 GitHub 上创建新仓库（如 my-microservice），克隆到本地：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git clone git@github.com:your-user-name/my-microservice.git
+</span></span><span style=display:flex><span>cd my-microservice
+</span></span></code></pre></div></li></ul></li><li><p>初始化 Node.js 项目：</p><ul><li><p>初始化项目并安装 Express：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>npm init -y
+</span></span><span style=display:flex><span>npm install express
+</span></span></code></pre></div></li><li><p>创建应用代码 (index.js)：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>express</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>require</span>(<span style=color:#e6db74>&#39;express&#39;</span>);
+</span></span><span style=display:flex><span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>app</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>express</span>();
+</span></span><span style=display:flex><span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>port</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>process</span>.<span style=color:#a6e22e>env</span>.<span style=color:#a6e22e>PORT</span> <span style=color:#f92672>||</span> <span style=color:#ae81ff>3000</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>version</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>process</span>.<span style=color:#a6e22e>env</span>.<span style=color:#a6e22e>VERSION</span> <span style=color:#f92672>||</span> <span style=color:#e6db74>&#39;1.0.0&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>app</span>.<span style=color:#a6e22e>get</span>(<span style=color:#e6db74>&#39;/&#39;</span>, (<span style=color:#a6e22e>req</span>, <span style=color:#a6e22e>res</span>) =&gt; {
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>res</span>.<span style=color:#a6e22e>send</span>(<span style=color:#e6db74>`Version: </span><span style=color:#e6db74>${</span><span style=color:#a6e22e>version</span><span style=color:#e6db74>}</span><span style=color:#e6db74>`</span>);
+</span></span><span style=display:flex><span>});
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>app</span>.<span style=color:#a6e22e>listen</span>(<span style=color:#a6e22e>port</span>, () =&gt; {
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>console</span>.<span style=color:#a6e22e>log</span>(<span style=color:#e6db74>`Server running on port </span><span style=color:#e6db74>${</span><span style=color:#a6e22e>port</span><span style=color:#e6db74>}</span><span style=color:#e6db74>`</span>);
+</span></span><span style=display:flex><span>});
+</span></span></code></pre></div></li><li><p>创建 package.json：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;my-microservice&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;version&#34;</span>: <span style=color:#e6db74>&#34;1.0.0&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;Simple microservice for CI/CD demo&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;main&#34;</span>: <span style=color:#e6db74>&#34;index.js&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;scripts&#34;</span>: {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>&#34;start&#34;</span>: <span style=color:#e6db74>&#34;node index.js&#34;</span>
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;dependencies&#34;</span>: {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>&#34;express&#34;</span>: <span style=color:#e6db74>&#34;^4.17.1&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div></li><li><p>创建 Dockerfile：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-dockerfile data-lang=dockerfile><span style=display:flex><span><span style=color:#66d9ef>FROM</span><span style=color:#e6db74> alibaba-cloud-linux-3-registry.cn-hangzhou.cr.aliyuncs.com/alinux3/node:16.17.1-nslt</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>USER</span><span style=color:#e6db74> root</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> mkdir -p /app <span style=color:#f92672>&amp;&amp;</span> chown -R node:node /app<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>WORKDIR</span><span style=color:#e6db74> /app</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>COPY</span> package*.json ./<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> chown -R node:node /app<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>USER</span><span style=color:#e6db74> node</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> npm install --production<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>USER</span><span style=color:#e6db74> root</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>COPY</span> . .<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> chown -R node:node /app<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>USER</span><span style=color:#e6db74> node</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>EXPOSE</span><span style=color:#e6db74> 3000</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>CMD</span> [<span style=color:#e6db74>&#34;node&#34;</span>, <span style=color:#e6db74>&#34;index.js&#34;</span>]<span style=color:#960050;background-color:#1e0010>
+</span></span></span></code></pre></div></li><li><p>创建 .buildspec.yml（用于 CodeBuild）：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>version</span>: <span style=color:#ae81ff>0.2</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>phases</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pre_build</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>commands</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo Logging in to Amazon ECR...</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>REPOSITORY_URI=$ECR_REGISTRY/my-microservice</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>IMAGE_TAG=${COMMIT_HASH:=latest}</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo &#34;Repository URI: $REPOSITORY_URI&#34;</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo &#34;Image Tag: $IMAGE_TAG&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>build</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>commands</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo Build started on `date`</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo Building the Docker image with Alibaba Cloud Linux base...</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>docker build -t $REPOSITORY_URI:latest .</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>post_build</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>commands</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo Build completed on `date`</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo Pushing the Docker images...</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>docker push $REPOSITORY_URI:latest</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>docker push $REPOSITORY_URI:$IMAGE_TAG</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo Writing image definitions file...</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>printf &#39;[{&#34;name&#34;:&#34;my-container&#34;,&#34;imageUri&#34;:&#34;%s&#34;}]&#39; $REPOSITORY_URI:$IMAGE_TAG &gt; imagedefinitions.json</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>echo &#34;Contents of imagedefinitions.json:&#34;</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ae81ff>cat imagedefinitions.json</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>artifacts</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>files</span>: 
+</span></span><span style=display:flex><span>    - <span style=color:#ae81ff>imagedefinitions.json</span>
+</span></span><span style=display:flex><span>    - <span style=color:#ae81ff>appspec.yaml</span>
+</span></span></code></pre></div></li><li><p>初始化 Git 仓库：</p><ul><li><p>创建 main 和 develop 分支：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git checkout -b main
+</span></span><span style=display:flex><span>git push origin main
+</span></span><span style=display:flex><span>git checkout -b develop
+</span></span><span style=display:flex><span>git push origin develop
+</span></span></code></pre></div></li><li><p>设置分支保护规则（GitHub Settings > Branches），要求 PR 合并到 main 和 develop。</p></li></ul></li></ul></li></ul><p><strong>重要：配置分支保护规则</strong></p><p>为了确保代码质量和发布安全，强烈建议在 GitHub 仓库中配置分支保护规则：</p><ol><li><p><strong>进入仓库设置</strong>：</p><ul><li>在 GitHub 仓库页面，点击 Settings > Branches</li></ul></li><li><p><strong>配置 main 分支保护</strong>：</p><pre tabindex=0><code>Branch name pattern: main
+
+✅ Restrict pushes that create files larger than 100 MB
+✅ Require a pull request before merging
+  ✅ Require approvals (1)
+  ✅ Dismiss stale PR approvals when new commits are pushed
+  ✅ Require review from code owners
+✅ Require status checks to pass before merging
+  ✅ Require branches to be up to date before merging
+✅ Require conversation resolution before merging
+✅ Require signed commits (可选，提高安全性)
+✅ Require linear history (可选，保持干净的提交历史)
+✅ Include administrators (建议开启，确保一致性)
+</code></pre></li><li><p><strong>配置 develop 分支保护</strong>：</p><pre tabindex=0><code>Branch name pattern: develop
+
+✅ Require a pull request before merging
+  ✅ Require approvals (1)
+✅ Require status checks to pass before merging
+✅ Require conversation resolution before merging
+</code></pre></li><li><p><strong>添加状态检查</strong>（如果配置了CI）：</p><ul><li>在 &ldquo;Require status checks to pass before merging&rdquo; 中添加：</li><li><code>continuous-integration/...</code> (你的CI系统检查)</li><li><code>security/...</code> (安全扫描检查)</li></ul></li></ol><h5 id=412-本地测试>4.1.2 本地测试</h5><ul><li><p>构建并运行 Docker 容器：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>docker build -t my-microservice .
+</span></span><span style=display:flex><span>docker run -p 3000:3000 -e VERSION<span style=color:#f92672>=</span>1.0.0 my-microservice
+</span></span></code></pre></div></li></ul><h4 id=42-aws-基础设施设置>4.2 AWS 基础设施设置</h4><h5 id=421-amazon-ecr>4.2.1 Amazon ECR</h5><ul><li><p>创建 ECR 仓库：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws ecr create-repository --repository-name my-microservice --region us-west-2
+</span></span></code></pre></div></li><li><p>记录 ECR 仓库 URI（如 your-account-id.dkr.ecr.us-west-2.amazonaws.com/my-microservice）。</p></li><li><p>推送本地 Docker 镜像到 ECR：</p><ol><li><p>登录 ECR 仓库：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin &lt;your-account-id&gt;.dkr.ecr.us-west-2.amazonaws.com
+</span></span></code></pre></div></li><li><p>给本地镜像打上 ECR tag（以 v1.0.0 为例）：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>docker tag my-microservice:v1.0.0 &lt;your-account-id&gt;.dkr.ecr.us-west-2.amazonaws.com/my-microservice:v1.0.0
+</span></span></code></pre></div></li><li><p>推送镜像到 ECR：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>docker push &lt;your-account-id&gt;.dkr.ecr.us-west-2.amazonaws.com/my-microservice:v1.0.0
+</span></span></code></pre></div></li><li><p>（可选）推送 latest tag：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>docker tag my-microservice:v1.0.0 &lt;your-account-id&gt;.dkr.ecr.us-west-2.amazonaws.com/my-microservice:latest
+</span></span><span style=display:flex><span>docker push &lt;your-account-id&gt;.dkr.ecr.us-west-2.amazonaws.com/my-microservice:latest
+</span></span></code></pre></div></li></ol></li></ul><h5 id=422-amazon-ecs-fargate>4.2.2 Amazon ECS Fargate</h5><ul><li><p>创建 ECS 集群：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws ecs create-cluster --cluster-name my-cluster --region us-west-2
+</span></span></code></pre></div></li><li><p>创建任务定义 (task-definition.json)：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;family&#34;</span>: <span style=color:#e6db74>&#34;my-task-definition&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;networkMode&#34;</span>: <span style=color:#e6db74>&#34;awsvpc&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;requiresCompatibilities&#34;</span>: [<span style=color:#e6db74>&#34;FARGATE&#34;</span>],
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;cpu&#34;</span>: <span style=color:#e6db74>&#34;256&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;memory&#34;</span>: <span style=color:#e6db74>&#34;512&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;executionRoleArn&#34;</span>: <span style=color:#e6db74>&#34;arn:aws:iam::your-account-id:role/ecsTaskExecutionRole&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;taskRoleArn&#34;</span>: <span style=color:#e6db74>&#34;arn:aws:iam::your-account-id:role/ecsTaskRole&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;containerDefinitions&#34;</span>: [
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;my-container&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;image&#34;</span>: <span style=color:#e6db74>&#34;your-account-id.dkr.ecr.us-west-2.amazonaws.com/my-microservice:latest&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;portMappings&#34;</span>: [
+</span></span><span style=display:flex><span>                {
+</span></span><span style=display:flex><span>                    <span style=color:#f92672>&#34;containerPort&#34;</span>: <span style=color:#ae81ff>3000</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#f92672>&#34;hostPort&#34;</span>: <span style=color:#ae81ff>3000</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#f92672>&#34;protocol&#34;</span>: <span style=color:#e6db74>&#34;tcp&#34;</span>
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            ],
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;environment&#34;</span>: [
+</span></span><span style=display:flex><span>                {
+</span></span><span style=display:flex><span>                    <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;VERSION&#34;</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#f92672>&#34;value&#34;</span>: <span style=color:#e6db74>&#34;1.0.0&#34;</span>
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            ],
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;essential&#34;</span>: <span style=color:#66d9ef>true</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    ]
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div></li><li><p>注册任务定义：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws ecs register-task-definition --cli-input-json file://task-definition.json --region us-west-2
+</span></span></code></pre></div></li><li><p>创建 ALB 和目标组：</p><ul><li>使用 AWS 控制台或 CLI 创建 ALB，配置监听器（HTTP 80）转发到目标组</li><li>目标组绑定端口 3000，健康检查路径为 /</li></ul></li><li><p>创建 ECS 服务：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;cluster&#34;</span>: <span style=color:#e6db74>&#34;my-cluster&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;serviceName&#34;</span>: <span style=color:#e6db74>&#34;my-service&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;taskDefinition&#34;</span>: <span style=color:#e6db74>&#34;my-task-definition&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;desiredCount&#34;</span>: <span style=color:#ae81ff>2</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;launchType&#34;</span>: <span style=color:#e6db74>&#34;FARGATE&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;networkConfiguration&#34;</span>: {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>&#34;awsvpcConfiguration&#34;</span>: {
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;subnets&#34;</span>: [<span style=color:#e6db74>&#34;subnet-12345678&#34;</span>, <span style=color:#e6db74>&#34;subnet-87654321&#34;</span>],
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;securityGroups&#34;</span>: [<span style=color:#e6db74>&#34;sg-12345678&#34;</span>],
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;assignPublicIp&#34;</span>: <span style=color:#e6db74>&#34;ENABLED&#34;</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;loadBalancers&#34;</span>: [
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;targetGroupArn&#34;</span>: <span style=color:#e6db74>&#34;arn:aws:elasticloadbalancing:us-west-2:your-account-id:targetgroup/my-target-group/1234567890&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;containerName&#34;</span>: <span style=color:#e6db74>&#34;my-container&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;containerPort&#34;</span>: <span style=color:#ae81ff>3000</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    ],
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;deploymentController&#34;</span>: {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>&#34;type&#34;</span>: <span style=color:#e6db74>&#34;CODE_DEPLOY&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div></li></ul><h5 id=423-aws-codedeploy>4.2.3 AWS CodeDeploy</h5><ul><li><p>创建 CodeDeploy 应用：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws deploy create-application --application-name my-ecs-app --compute-platform ECS --region us-west-2
+</span></span></code></pre></div></li><li><p>创建部署组 (<code>deployment-group.json</code>)：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;applicationName&#34;</span>: <span style=color:#e6db74>&#34;my-ecs-app&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;deploymentGroupName&#34;</span>: <span style=color:#e6db74>&#34;my-deployment-group&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;serviceRoleArn&#34;</span>: <span style=color:#e6db74>&#34;arn:aws:iam::933505494323:role/CodeDeployServiceRole&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;deploymentConfigName&#34;</span>: <span style=color:#e6db74>&#34;CodeDeployDefault.ECSCanary10Percent5Minutes&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;ecsServices&#34;</span>: [
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>      <span style=color:#f92672>&#34;serviceName&#34;</span>: <span style=color:#e6db74>&#34;my-service&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f92672>&#34;clusterName&#34;</span>: <span style=color:#e6db74>&#34;my-cluster&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  ],
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;loadBalancerInfo&#34;</span>: {
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;targetGroupPairInfoList&#34;</span>: [
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>&#34;targetGroups&#34;</span>: [
+</span></span><span style=display:flex><span>          { <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;my-target-group&#34;</span> },
+</span></span><span style=display:flex><span>          { <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;my-target-group-green&#34;</span> }
+</span></span><span style=display:flex><span>        ],
+</span></span><span style=display:flex><span>        <span style=color:#f92672>&#34;prodTrafficRoute&#34;</span>: {
+</span></span><span style=display:flex><span>          <span style=color:#f92672>&#34;listenerArns&#34;</span>: [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;arn:aws:elasticloadbalancing:us-west-2:933505494323:listener/app/my-alb/9e1a63adcbcca2c1/bfe9ec199a481387&#34;</span>
+</span></span><span style=display:flex><span>          ]
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    ]
+</span></span><span style=display:flex><span>  },
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;blueGreenDeploymentConfiguration&#34;</span>: {
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;terminateBlueInstancesOnDeploymentSuccess&#34;</span>: {
+</span></span><span style=display:flex><span>      <span style=color:#f92672>&#34;action&#34;</span>: <span style=color:#e6db74>&#34;TERMINATE&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f92672>&#34;terminationWaitTimeInMinutes&#34;</span>: <span style=color:#ae81ff>5</span>
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;deploymentReadyOption&#34;</span>: {
+</span></span><span style=display:flex><span>      <span style=color:#f92672>&#34;actionOnTimeout&#34;</span>: <span style=color:#e6db74>&#34;CONTINUE_DEPLOYMENT&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f92672>&#34;waitTimeInMinutes&#34;</span>: <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  },
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;deploymentStyle&#34;</span>: {
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;deploymentType&#34;</span>: <span style=color:#e6db74>&#34;BLUE_GREEN&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;deploymentOption&#34;</span>: <span style=color:#e6db74>&#34;WITH_TRAFFIC_CONTROL&#34;</span>
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><strong>核心注意点：</strong></p><ul><li>targetGroupPairInfoList 必须包含两个目标组（蓝绿部署），如 my-target-group 和 my-target-group-green。</li><li>prodTrafficRoute.listenerArns 必须为 ALB 监听器的 ARN。</li><li>blueGreenDeploymentConfiguration 不能包含 greenFleetProvisioningOption 字段。</li><li>deploymentStyle 必须为 BLUE_GREEN 和 WITH_TRAFFIC_CONTROL。</li><li>serviceRoleArn 必须为具备 CodeDeploy 权限的 IAM 角色。</li><li>所有名称、ARN、ID 必须与实际 AWS 资源一致。</li></ul></li><li><p>创建部署组：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws deploy create-deployment-group --cli-input-json file://deployment-group.json --region us-west-2
+</span></span></code></pre></div></li></ul><h5 id=424-aws-codepipeline>4.2.4 AWS CodePipeline</h5><p>使用 AWS CLI 创建完整的 CodePipeline 管道：</p><p><strong>1. 创建 CodePipeline 服务角色</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 创建信任策略文件</span>
+</span></span><span style=display:flex><span>cat &gt; codepipeline-trust-policy.json <span style=color:#e6db74>&lt;&lt; &#39;EOF&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Statement&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Principal&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;Service&#34;: &#34;codepipeline.amazonaws.com&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: &#34;sts:AssumeRole&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>EOF</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建角色</span>
+</span></span><span style=display:flex><span>aws iam create-role <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --role-name CodePipelineServiceRole <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --assume-role-policy-document file://codepipeline-trust-policy.json
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建权限策略（包含S3工件存储和ECR镜像访问权限）</span>
+</span></span><span style=display:flex><span>cat &gt; codepipeline-service-policy.json <span style=color:#e6db74>&lt;&lt; &#39;EOF&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Statement&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:GetBucketLocation&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:GetObject&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:GetObjectVersion&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:PutObject&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:ListBucket&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;arn:aws:s3:::my-microservice-pipeline-artifacts-*&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;arn:aws:s3:::my-microservice-pipeline-artifacts-*/*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:GetAuthorizationToken&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:BatchCheckLayerAvailability&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:GetDownloadUrlForLayer&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:BatchGetImage&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:DescribeRepositories&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:DescribeImages&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codebuild:BatchGetBuilds&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codebuild:StartBuild&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codedeploy:CreateDeployment&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codedeploy:GetApplication&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codedeploy:GetApplicationRevision&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codedeploy:GetDeployment&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codedeploy:GetDeploymentConfig&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codedeploy:RegisterApplicationRevision&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;codestar-connections:UseConnection&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecs:DescribeServices&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecs:DescribeTaskDefinition&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecs:RegisterTaskDefinition&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;iam:PassRole&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>EOF</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 绑定策略到角色</span>
+</span></span><span style=display:flex><span>aws iam put-role-policy <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --role-name CodePipelineServiceRole <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --policy-name CodePipelineServicePolicy <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --policy-document file://codepipeline-service-policy.json
+</span></span></code></pre></div><p><strong>2. 创建 CodeBuild 服务角色</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 创建 CodeBuild 信任策略</span>
+</span></span><span style=display:flex><span>cat &gt; codebuild-trust-policy.json <span style=color:#e6db74>&lt;&lt; &#39;EOF&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Statement&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Principal&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;Service&#34;: &#34;codebuild.amazonaws.com&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: &#34;sts:AssumeRole&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>EOF</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建角色</span>
+</span></span><span style=display:flex><span>aws iam create-role <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --role-name CodeBuildServiceRole <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --assume-role-policy-document file://codebuild-trust-policy.json
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 绑定 AWS 托管策略</span>
+</span></span><span style=display:flex><span>aws iam attach-role-policy <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --role-name CodeBuildServiceRole <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建自定义策略用于 ECR 访问和S3工件访问</span>
+</span></span><span style=display:flex><span>cat &gt; codebuild-service-policy.json <span style=color:#e6db74>&lt;&lt; &#39;EOF&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Statement&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:GetAuthorizationToken&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:BatchCheckLayerAvailability&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:GetDownloadUrlForLayer&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:BatchGetImage&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:PutImage&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:InitiateLayerUpload&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:UploadLayerPart&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;ecr:CompleteLayerUpload&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: &#34;*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:GetBucketLocation&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:GetObject&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;s3:PutObject&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Resource&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;arn:aws:s3:::my-microservice-pipeline-artifacts-*&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;arn:aws:s3:::my-microservice-pipeline-artifacts-*/*&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>EOF</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 绑定自定义策略</span>
+</span></span><span style=display:flex><span>aws iam put-role-policy <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --role-name CodeBuildServiceRole <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --policy-name CodeBuildServicePolicy <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --policy-document file://codebuild-service-policy.json
+</span></span></code></pre></div><p><strong>3. 创建 CodeBuild 项目</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 获取账户ID和ECR仓库URI</span>
+</span></span><span style=display:flex><span>ACCOUNT_ID<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>aws sts get-caller-identity --query Account --output text<span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>ECR_REGISTRY<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>ACCOUNT_ID<span style=color:#e6db74>}</span><span style=color:#e6db74>.dkr.ecr.us-west-2.amazonaws.com&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 确保 ECR 仓库存在</span>
+</span></span><span style=display:flex><span>aws ecr describe-repositories --repository-names my-microservice --region us-west-2 <span style=color:#f92672>||</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>aws ecr create-repository --repository-name my-microservice --region us-west-2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建 CodeBuild 项目配置</span>
+</span></span><span style=display:flex><span>ECR_REGISTRY<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>ACCOUNT_ID<span style=color:#e6db74>}</span><span style=color:#e6db74>.dkr.ecr.us-west-2.amazonaws.com&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>cat &gt; codebuild-project.json <span style=color:#e6db74>&lt;&lt; EOF
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;name&#34;: &#34;my-microservice-build&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;description&#34;: &#34;Build project for my-microservice&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;source&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;type&#34;: &#34;CODEPIPELINE&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;buildspec&#34;: &#34;.buildspec.yml&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;artifacts&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;type&#34;: &#34;CODEPIPELINE&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;environment&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;type&#34;: &#34;LINUX_CONTAINER&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;image&#34;: &#34;aws/codebuild/amazonlinux2-x86_64-standard:3.0&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;computeType&#34;: &#34;BUILD_GENERAL1_SMALL&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;environmentVariables&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;name&#34;: &#34;AWS_REGION&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;value&#34;: &#34;us-west-2&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;name&#34;: &#34;ECR_REGISTRY&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;value&#34;: &#34;${ECR_REGISTRY}&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;name&#34;: &#34;IMAGE_REPO_NAME&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;value&#34;: &#34;my-microservice&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;privilegedMode&#34;: true
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;serviceRole&#34;: &#34;arn:aws:iam::${ACCOUNT_ID}:role/CodeBuildServiceRole&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>EOF</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建 CodeBuild 项目</span>
+</span></span><span style=display:flex><span>aws codebuild create-project <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --cli-input-json file://codebuild-project.json <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --region us-west-2
+</span></span></code></pre></div><p><strong>4. 创建 GitHub 连接</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 创建 GitHub 连接</span>
+</span></span><span style=display:flex><span>aws codestar-connections create-connection <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --provider-type GitHub <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --connection-name my-github-connection <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --region us-west-2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 完成连接授权（需要在AWS控制台完成）：</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 1. 前往 CodePipeline &gt; Settings &gt; Connections</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 2. 找到连接并点击 &#34;Update pending connection&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 3. 授权 AWS 访问 GitHub 账户</span>
+</span></span></code></pre></div><p><strong>5. 创建 CodePipeline 管道</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 设置变量（请替换为实际值）</span>
+</span></span><span style=display:flex><span>GITHUB_CONNECTION_ARN<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;arn:aws:codestar-connections:us-west-2:</span><span style=color:#e6db74>${</span>ACCOUNT_ID<span style=color:#e6db74>}</span><span style=color:#e6db74>:connection/your-connection-id&#34;</span>
+</span></span><span style=display:flex><span>GITHUB_REPO<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;your-username/my-microservice&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建S3存储桶用于Pipeline工件存储</span>
+</span></span><span style=display:flex><span>BUCKET_NAME<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;my-microservice-pipeline-artifacts-</span><span style=color:#e6db74>${</span>ACCOUNT_ID<span style=color:#e6db74>}</span><span style=color:#e6db74>-us-west-2&#34;</span>
+</span></span><span style=display:flex><span>aws s3 mb s3://<span style=color:#e6db74>${</span>BUCKET_NAME<span style=color:#e6db74>}</span> --region us-west-2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建 Pipeline 配置（Docker镜像存储在ECR，构建工件存储在S3）</span>
+</span></span><span style=display:flex><span>cat &gt; pipeline-config.json <span style=color:#e6db74>&lt;&lt; EOF
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;pipeline&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;name&#34;: &#34;my-microservice-pipeline&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;roleArn&#34;: &#34;arn:aws:iam::${ACCOUNT_ID}:role/CodePipelineServiceRole&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;artifactStore&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;type&#34;: &#34;S3&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;location&#34;: &#34;${BUCKET_NAME}&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#34;stages&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;name&#34;: &#34;Source&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;actions&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;name&#34;: &#34;SourceAction&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;actionTypeId&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;category&#34;: &#34;Source&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;owner&#34;: &#34;AWS&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;provider&#34;: &#34;CodeStarSourceConnection&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;version&#34;: &#34;1&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;configuration&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;ConnectionArn&#34;: &#34;${GITHUB_CONNECTION_ARN}&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;FullRepositoryId&#34;: &#34;${GITHUB_REPO}&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;BranchName&#34;: &#34;main&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;OutputArtifactFormat&#34;: &#34;CODE_ZIP&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;outputArtifacts&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                &#34;name&#34;: &#34;SourceOutput&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;name&#34;: &#34;Build&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;actions&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;name&#34;: &#34;BuildAction&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;actionTypeId&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;category&#34;: &#34;Build&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;owner&#34;: &#34;AWS&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;provider&#34;: &#34;CodeBuild&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;version&#34;: &#34;1&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;configuration&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;ProjectName&#34;: &#34;my-microservice-build&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;inputArtifacts&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                &#34;name&#34;: &#34;SourceOutput&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            ],
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;outputArtifacts&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                &#34;name&#34;: &#34;BuildOutput&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;name&#34;: &#34;Deploy&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;actions&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;name&#34;: &#34;DeployAction&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;actionTypeId&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;category&#34;: &#34;Deploy&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;owner&#34;: &#34;AWS&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;provider&#34;: &#34;CodeDeploy&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;version&#34;: &#34;1&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;configuration&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;ApplicationName&#34;: &#34;my-ecs-app&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              &#34;DeploymentGroupName&#34;: &#34;my-deployment-group&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            &#34;inputArtifacts&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                &#34;name&#34;: &#34;BuildOutput&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>EOF</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建 Pipeline</span>
+</span></span><span style=display:flex><span>aws codepipeline create-pipeline <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --cli-input-json file://pipeline-config.json <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --region us-west-2
+</span></span></code></pre></div><p><strong>6. 创建 appspec.yml（用于 CodeDeploy）</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>version</span>: <span style=color:#ae81ff>0.0</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>Resources</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>TargetService</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>Type</span>: <span style=color:#ae81ff>AWS::ECS::Service</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>Properties</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>TaskDefinition</span>: <span style=color:#e6db74>&#34;&lt;TASK_DEFINITION_ARN&gt;&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>LoadBalancerInfo</span>:
+</span></span><span style=display:flex><span>          <span style=color:#f92672>ContainerName</span>: <span style=color:#e6db74>&#34;my-container&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>ContainerPort</span>: <span style=color:#ae81ff>3000</span>
+</span></span></code></pre></div><p><strong>7. 验证管道</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 查看管道状态</span>
+</span></span><span style=display:flex><span>aws codepipeline get-pipeline-state <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --name my-microservice-pipeline <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --region us-west-2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 手动启动管道（测试用）</span>
+</span></span><span style=display:flex><span>aws codepipeline start-pipeline-execution <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --name my-microservice-pipeline <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --region us-west-2
+</span></span></code></pre></div><h4 id=43-发布流程>4.3 发布流程：</h4><ul><li><p>开发新功能：</p><ul><li>从 <code>develop</code> 创建 <code>feature/add-login</code> 分支，开发功能。</li><li>提交 PR，合并回 <code>develop</code>。</li></ul></li><li><p>准备发布：</p><ul><li><p>从 <code>develop</code> 创建 <code>release/1.2.3</code> 分支，更新 <code>package.json</code> 版本号为 <code>1.2.3</code>。</p></li><li><p><strong>如果main分支没有保护规则（直接合并方式）</strong>：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git checkout main
+</span></span><span style=display:flex><span>git merge release/1.2.3
+</span></span><span style=display:flex><span>git tag v1.2.3
+</span></span><span style=display:flex><span>git push origin main v1.2.3
+</span></span></code></pre></div></li><li><p><strong>如果main分支开启了保护规则（推荐的PR方式）</strong>：</p><ol><li><p>推送release分支到远程：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git push origin release/1.2.3
+</span></span></code></pre></div></li><li><p>在GitHub上创建Pull Request：</p><ul><li>源分支：<code>release/1.2.3</code></li><li>目标分支：<code>main</code></li><li>标题：<code>Release v1.2.3</code></li><li>描述：包含本次发布的功能和修复说明</li></ul></li><li><p>经过代码审查和CI检查后，合并PR</p></li><li><p>合并后在main分支上打标签：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git checkout main
+</span></span><span style=display:flex><span>git pull origin main
+</span></span><span style=display:flex><span>git tag v1.2.3
+</span></span><span style=display:flex><span>git push origin v1.2.3
+</span></span></code></pre></div></li><li><p>将变更合并回develop分支：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git merge main
+</span></span><span style=display:flex><span>git push origin develop
+</span></span></code></pre></div></li></ol></li></ul></li><li><p>触发 CI/CD：</p><ul><li>GitHub 标签 v1.2.3 触发 CodePipeline。</li><li>CodeBuild 构建 Docker 镜像，推送至 ECR。</li><li>CodeDeploy 执行 Canary 部署（10% 流量 5 分钟后全切换）。</li></ul></li><li><p>验证：</p><ul><li>访问 ALB DNS（如 my-alb-1234567890.us-west-2.elb.amazonaws.com）。</li><li>初始 10% 请求返回 Version: 1.2.3，5 分钟后全切换。</li><li>使用 CloudWatch 监控部署健康。</li></ul></li></ul><h4 id=44-紧急修复>4.4 紧急修复</h4><ul><li>从 <code>main</code> 创建 <code>hotfix/1.2.4</code> 分支，修复问题。</li><li>更新 <code>package.json</code> 版本号为 <code>1.2.4</code>。</li><li>合并到 <code>main</code>，打标签 <code>v1.2.4</code>，推送到 GitHub。</li><li>合并回 <code>develop</code>，触发 <code>CodePipeline</code> 和 <code>CodeDeploy</code>。</li></ul><h3 id=5-优化与监控及注意事项>5. 优化与监控及注意事项</h3><ul><li><p>性能优化：</p><ul><li><p>使用 CodeBuild 的缓存（如 Docker 层缓存）加速构建。</p></li><li><p>配置 ECS Fargate 的 CPU 和内存（256 CPU，512 MB 内存）以匹配负载。</p></li><li><p>设置 ALB 健康检查，确保快速检测故障。</p></li></ul></li><li><p>监控：</p><ul><li><p>使用 CloudWatch 监控 ECS 任务健康、ALB 请求延迟和 CodeDeploy 部署状态。</p></li><li><p>设置警报（如部署失败或任务失败）通知团队。</p></li><li><p>CodeDeploy 自动回滚失败部署，需监控 CloudWatch 日志。</p></li></ul></li><li><p>成本优化：</p><ul><li>配置 ECR 仓库的生命周期策略，自动清理旧版本镜像。</li><li>优化镜像大小，使用 multi-stage builds 和 .dockerignore。</li><li>定期清理未使用的 ECR 镜像，降低存储成本。</li></ul></li><li><p>权限策略：</p><ul><li><p>确保 IAM 角色（如 ecsTaskExecutionRole、CodeDeployServiceRole）配置正确。</p><ul><li><p><strong>创建 ecsTaskExecutionRole 并绑定自定义策略</strong>：</p><ol><li><p>创建自定义策略（保存为 ecs-task-execution-policy.json）：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;Version&#34;</span>: <span style=color:#e6db74>&#34;2012-10-17&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&#34;Statement&#34;</span>: [
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;Effect&#34;</span>: <span style=color:#e6db74>&#34;Allow&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;Action&#34;</span>: [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;ecr:GetAuthorizationToken&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;ecr:BatchCheckLayerAvailability&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;ecr:GetDownloadUrlForLayer&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;ecr:BatchGetImage&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;logs:CreateLogStream&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;logs:PutLogEvents&#34;</span>
+</span></span><span style=display:flex><span>            ],
+</span></span><span style=display:flex><span>            <span style=color:#f92672>&#34;Resource&#34;</span>: <span style=color:#e6db74>&#34;*&#34;</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    ]
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div></li><li><p>创建角色并绑定信任策略：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document <span style=color:#e6db74>&#39;{
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#34;Statement&#34;: [
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Principal&#34;: {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        &#34;Service&#34;: &#34;ecs-tasks.amazonaws.com&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      },
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#34;Action&#34;: &#34;sts:AssumeRole&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  ]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>}&#39;</span>
+</span></span></code></pre></div></li><li><p>创建并绑定自定义策略：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws iam create-policy --policy-name MyECSTaskExecutionPolicy --policy-document file://ecs-task-execution-policy.json
+</span></span><span style=display:flex><span>aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::&lt;your-account-id&gt;:policy/MyECSTaskExecutionPolicy
+</span></span></code></pre></div></li></ol></li><li><p><strong>ecsTaskRole 只需信任策略</strong>：
+仅允许 ECS 任务以该角色身份运行，不授予任何 AWS 资源访问权限，符合最小权限原则。如后续业务需要再补充权限策略。</p></li></ul></li></ul></li><li><p>版本一致性：</p><ul><li>严格遵循 SemVer，确保 <code>package.json</code> 和 Git 标签一致。</li></ul></li></ul><h3 id=6-示例工作流>6. 示例工作流</h3><h4 id=61-基础工作流无分支保护>6.1 基础工作流（无分支保护）</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 开发新功能</span>
+</span></span><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git checkout -b feature/add-login
+</span></span><span style=display:flex><span><span style=color:#75715e># 开发代码</span>
+</span></span><span style=display:flex><span>git add .
+</span></span><span style=display:flex><span>git commit -m <span style=color:#e6db74>&#34;Add login feature&#34;</span>
+</span></span><span style=display:flex><span>git push origin feature/add-login
+</span></span><span style=display:flex><span><span style=color:#75715e># 提交 PR，合并到 develop</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 准备发布</span>
+</span></span><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git pull origin develop
+</span></span><span style=display:flex><span>git checkout -b release/1.2.3
+</span></span><span style=display:flex><span><span style=color:#75715e># 更新 package.json 版本</span>
+</span></span><span style=display:flex><span>git add .
+</span></span><span style=display:flex><span>git commit -m <span style=color:#e6db74>&#34;Prepare release 1.2.3&#34;</span>
+</span></span><span style=display:flex><span>git push origin release/1.2.3
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 测试通过后，直接合并到main</span>
+</span></span><span style=display:flex><span>git checkout main
+</span></span><span style=display:flex><span>git pull origin main
+</span></span><span style=display:flex><span>git merge release/1.2.3
+</span></span><span style=display:flex><span>git tag v1.2.3
+</span></span><span style=display:flex><span>git push origin main v1.2.3
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 合并回 develop</span>
+</span></span><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git merge release/1.2.3
+</span></span><span style=display:flex><span>git push origin develop
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 清理release分支</span>
+</span></span><span style=display:flex><span>git branch -d release/1.2.3
+</span></span><span style=display:flex><span>git push origin --delete release/1.2.3
+</span></span></code></pre></div><h4 id=62-推荐工作流开启分支保护>6.2 推荐工作流（开启分支保护）</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 开发新功能</span>
+</span></span><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git pull origin develop
+</span></span><span style=display:flex><span>git checkout -b feature/add-login
+</span></span><span style=display:flex><span><span style=color:#75715e># 开发代码</span>
+</span></span><span style=display:flex><span>git add .
+</span></span><span style=display:flex><span>git commit -m <span style=color:#e6db74>&#34;Add login feature&#34;</span>
+</span></span><span style=display:flex><span>git push origin feature/add-login
+</span></span><span style=display:flex><span><span style=color:#75715e># 在GitHub上创建PR: feature/add-login → develop</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 经过代码审查后合并PR</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 准备发布</span>
+</span></span><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git pull origin develop  <span style=color:#75715e># 拉取最新的develop</span>
+</span></span><span style=display:flex><span>git checkout -b release/1.2.3
+</span></span><span style=display:flex><span><span style=color:#75715e># 更新 package.json 版本号为 1.2.3</span>
+</span></span><span style=display:flex><span>vim package.json  <span style=color:#75715e># 或使用其他编辑器</span>
+</span></span><span style=display:flex><span>git add package.json
+</span></span><span style=display:flex><span>git commit -m <span style=color:#e6db74>&#34;Bump version to 1.2.3&#34;</span>
+</span></span><span style=display:flex><span>git push origin release/1.2.3
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 在GitHub上创建PR: release/1.2.3 → main</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># PR标题: &#34;Release v1.2.3&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># PR描述: 详细说明本次发布的功能和修复</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 经过代码审查和CI检查后合并PR</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># PR合并后，在本地打标签</span>
+</span></span><span style=display:flex><span>git checkout main
+</span></span><span style=display:flex><span>git pull origin main
+</span></span><span style=display:flex><span>git tag v1.2.3
+</span></span><span style=display:flex><span>git push origin v1.2.3
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建PR将main的变更合并回develop</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 在GitHub上创建PR: main → develop</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 或者在本地合并（如果develop没有保护规则）</span>
+</span></span><span style=display:flex><span>git checkout develop
+</span></span><span style=display:flex><span>git pull origin develop
+</span></span><span style=display:flex><span>git merge main
+</span></span><span style=display:flex><span>git push origin develop
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 清理release分支</span>
+</span></span><span style=display:flex><span>git branch -d release/1.2.3
+</span></span><span style=display:flex><span>git push origin --delete release/1.2.3
+</span></span></code></pre></div><h4 id=63-github-cli-自动化示例可选>6.3 GitHub CLI 自动化示例（可选）</h4><p>如果安装了GitHub CLI，可以自动化PR创建过程：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 安装GitHub CLI: https://cli.github.com/</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建release到main的PR</span>
+</span></span><span style=display:flex><span>gh pr create <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --base main <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --head release/1.2.3 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --title <span style=color:#e6db74>&#34;Release v1.2.3&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --body <span style=color:#e6db74>&#34;Release version 1.2.3 with new features and bug fixes&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 查看PR状态</span>
+</span></span><span style=display:flex><span>gh pr status
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 合并PR（需要满足所有保护规则）</span>
+</span></span><span style=display:flex><span>gh pr merge --squash --delete-branch
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 创建main到develop的PR</span>
+</span></span><span style=display:flex><span>gh pr create <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --base develop <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --head main <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --title <span style=color:#e6db74>&#34;Merge release v1.2.3 back to develop&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  --body <span style=color:#e6db74>&#34;Sync main branch changes back to develop&#34;</span>
+</span></span></code></pre></div><h4 id=64-分支保护规则推荐配置>6.4 分支保护规则推荐配置</h4><p>在GitHub仓库Settings > Branches中，为main和develop分支设置保护规则：</p><p><strong>main分支保护规则：</strong></p><ul><li>✅ Require pull request reviews before merging</li><li>✅ Require status checks to pass before merging</li><li>✅ Require branches to be up to date before merging</li><li>✅ Require signed commits (可选)</li><li>✅ Include administrators</li></ul><p><strong>develop分支保护规则：</strong></p><ul><li>✅ Require pull request reviews before merging</li><li>✅ Require status checks to pass before merging</li><li>✅ Require branches to be up to date before merging</li></ul><hr><h2 id=常见问题解答-faq>常见问题解答 (FAQ)</h2><h3 id=部署和配置问题>部署和配置问题</h3><h4 id=q1-出现-head--no-such-file-or-directory-错误怎么办>Q1: 出现 <code>head: |: No such file or directory</code> 错误怎么办？</h4><p><strong>问题</strong>: 在执行AWS CLI命令时出现终端显示错误
+<strong>原因</strong>: PAGER环境变量配置错误 (<code>head -n 10000 | cat</code>)
+<strong>解决方案</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>unset PAGER
+</span></span><span style=display:flex><span>export AWS_PAGER<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>echo <span style=color:#e6db74>&#39;export AWS_PAGER=&#34;&#34;&#39;</span> &gt;&gt; ~/.zshrc
+</span></span></code></pre></div><h4 id=q2-appspec配置错误-invalid_revision-could-not-parse-or-validate-one-of-the-resources>Q2: AppSpec配置错误 <code>INVALID_REVISION: Could not parse or validate one of the resources</code>？</h4><p><strong>问题</strong>: CodeDeploy无法解析AppSpec文件
+<strong>原因</strong>: TaskDefinition使用占位符 <code>&lt;TASK_DEFINITION></code> 而不是完整ARN
+<strong>解决方案</strong>: 更新appspec.yml使用完整ARN</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>version</span>: <span style=color:#ae81ff>0.0</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>Resources</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>TargetService</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>Type</span>: <span style=color:#ae81ff>AWS::ECS::Service</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>Properties</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>TaskDefinition</span>: <span style=color:#e6db74>&#34;arn:aws:ecs:us-west-2:933505494323:task-definition/my-task-definition:2&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>LoadBalancerInfo</span>:
+</span></span><span style=display:flex><span>          <span style=color:#f92672>ContainerName</span>: <span style=color:#e6db74>&#34;my-container&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>ContainerPort</span>: <span style=color:#ae81ff>3000</span>
+</span></span></code></pre></div><h4 id=q3-s3权限错误-iam_role_permissions-codedeployservicerole-does-not-give-permission-to-perform-operations-in-amazon-s3>Q3: S3权限错误 <code>IAM_ROLE_PERMISSIONS: CodeDeployServiceRole does not give permission to perform operations in Amazon S3</code>？</h4><p><strong>问题</strong>: CodeDeploy服务角色缺少S3访问权限
+<strong>原因</strong>: CodePipeline使用S3存储构建工件（如appspec.yml、taskdef.json），CodeDeploy需要从S3获取这些部署工件
+<strong>解决方案</strong>: 添加S3权限到CodeDeployServiceRole</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;Effect&#34;</span>: <span style=color:#e6db74>&#34;Allow&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;Action&#34;</span>: [
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;s3:GetBucketLocation&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;s3:GetObject&#34;</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;s3:ListBucket&#34;</span>
+</span></span><span style=display:flex><span>  ],
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;Resource&#34;</span>: [
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;arn:aws:s3:::my-microservice-pipeline-artifacts-933505494323-us-west-2&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;arn:aws:s3:::my-microservice-pipeline-artifacts-933505494323-us-west-2/*&#34;</span>
+</span></span><span style=display:flex><span>  ]
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><strong>重要说明</strong>:</p><ul><li><strong>Docker镜像</strong>: 存储在ECR中，提供高效的容器镜像管理</li><li><strong>构建工件</strong>: 存储在S3中，包括appspec.yml、taskdef.json等部署配置文件</li><li><strong>工件传递</strong>: CodePipeline的各阶段通过S3传递构建工件，这是AWS CodePipeline的标准工作方式</li></ul><h4 id=q4-elasticloadbalancing权限错误>Q4: ElasticLoadBalancing权限错误？</h4><p><strong>问题</strong>: <code>does not give permission to perform operations in Amazon ElasticLoadBalancing</code>
+<strong>解决方案</strong>: 添加ELB权限到 <code>aws-permissions/codedeploy-policy.json</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:DescribeLoadBalancers&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:DescribeListeners&#34;</span><span style=color:#960050;background-color:#1e0010>,</span> 
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:DescribeRules&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:ModifyListener&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:CreateTargetGroup&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:DeleteTargetGroup&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:RegisterTargets&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;elasticloadbalancing:DeregisterTargets&#34;</span>
+</span></span></code></pre></div><h4 id=q5-ecs-taskset权限错误-user-is-not-authorized-to-perform-ecscreatetaskset>Q5: ECS TaskSet权限错误 <code>User is not authorized to perform: ecs:CreateTaskSet</code>？</h4><p><strong>问题</strong>: ECS Blue/Green部署需要TaskSet操作权限
+<strong>解决方案</strong>: 添加ECS TaskSet权限到 <code>aws-permissions/codedeploy-policy.json</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span><span style=color:#e6db74>&#34;ecs:CreateTaskSet&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;ecs:UpdateTaskSet&#34;</span><span style=color:#960050;background-color:#1e0010>,</span> 
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;ecs:DeleteTaskSet&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;ecs:DescribeTaskSets&#34;</span><span style=color:#960050;background-color:#1e0010>,</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;ecs:UpdateServicePrimaryTaskSet&#34;</span>
+</span></span></code></pre></div><h3 id=配置匹配问题>配置匹配问题</h3><h4 id=q6-如何确保服务名称配置匹配>Q6: 如何确保服务名称配置匹配？</h4><p><strong>关键点</strong>: 以下配置必须保持一致</p><ul><li><code>service-definition.json</code>: <code>"serviceName": "my-service"</code></li><li>CodeDeploy部署组: <code>"serviceName": "my-service"</code></li><li>集群名称: <code>"cluster": "my-cluster"</code> / <code>"clusterName": "my-cluster"</code></li><li>容器配置: <code>"my-container:3000"</code></li><li>目标组: <code>my-target-group</code> / <code>my-target-group-green</code></li></ul><h4 id=q7-pipeline阶段状态含义>Q7: Pipeline阶段状态含义？</h4><p><strong>Pipeline阶段说明:</strong></p><ul><li>✅ <strong>Source</strong>: GitHub源代码拉取成功</li><li>✅ <strong>Build</strong>: Docker构建和ECR推送成功</li><li>🔄 <strong>Deploy</strong>: ECS Blue/Green部署进行中</li><li>❌ <strong>Failed</strong>: 检查具体错误消息</li></ul><h3 id=故障排除>故障排除</h3><h4 id=q8-如何监控pipeline执行>Q8: 如何监控Pipeline执行？</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 检查Pipeline状态</span>
+</span></span><span style=display:flex><span>aws codepipeline get-pipeline-state --name my-microservice-pipeline --region us-west-2 --query <span style=color:#e6db74>&#39;stageStates[*].[stageName,latestExecution.status]&#39;</span> --output table
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 检查CodeDeploy部署状态</span>
+</span></span><span style=display:flex><span>aws deploy list-deployments --application-name my-ecs-app --deployment-group-name my-deployment-group --include-only-statuses InProgress --region us-west-2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 获取部署详情</span>
+</span></span><span style=display:flex><span>aws deploy get-deployment --deployment-id &lt;deployment-id&gt; --region us-west-2
+</span></span></code></pre></div><h4 id=q9-如何手动触发pipeline>Q9: 如何手动触发Pipeline？</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aws codepipeline start-pipeline-execution --name my-microservice-pipeline --region us-west-2
+</span></span></code></pre></div><h3 id=最佳实践>最佳实践</h3><h4 id=q11-iam权限配置策略>Q11: IAM权限配置策略？</h4><ol><li><strong>渐进式权限</strong>: 根据错误逐步添加权限，避免过度授权</li><li><strong>权限分离</strong>: 不同服务使用专门的服务角色</li><li><strong>资源限制</strong>: 尽可能指定具体资源ARN而不是使用 <code>*</code></li><li><strong>定期审计</strong>: 定期检查和清理不必要的权限</li></ol><h4 id=q12-bluegreen部署注意事项>Q12: Blue/Green部署注意事项？</h4><ol><li><strong>健康检查</strong>: 确保容器健康检查配置正确</li><li><strong>目标组配置</strong>: 生产和测试目标组必须存在</li><li><strong>流量切换</strong>: 合理配置流量切换时间和策略</li><li><strong>回滚准备</strong>: 确保能够快速回滚到上一版本</li></ol><hr><h2 id=总结>总结</h2><p>本方案实现了基于AWS CodePipeline和CodeDeploy的完整GitFlow CI/CD流程，通过渐进式解决权限和配置问题，最终实现了从源代码到生产环境的自动化部署。关键成功因素包括：</p><ol><li><strong>严格的配置匹配</strong> - 确保所有服务名称、集群、容器配置一致</li><li><strong>渐进式权限配置</strong> - 根据实际错误逐步完善IAM权限</li><li><strong>完整的AppSpec配置</strong> - 使用正确的TaskDefinition ARN格式</li><li><strong>系统化的故障排除</strong> - 建立完整的监控和诊断流程</li></ol><p>通过本方案，小型团队可以快速建立现代化的CI/CD流程，提高开发效率和部署可靠性。</p></div><div class=post-tags><span class=tags-title>Tags:</span><div class=tags-list><a href=/tags/aws/ class=post-tag>Aws</a>
+<a href=/tags/codepipeline/ class=post-tag>Code pipeline</a>
+<a href=/tags/codedeploy/ class=post-tag>Code deploy</a>
+<a href=/tags/github/ class=post-tag>Git hub</a>
+<a href=/tags/gitflow/ class=post-tag>Gitflow</a>
+<a href=/tags/devops/ class=post-tag>Dev ops</a>
+<a href=/tags/ci/cd/ class=post-tag>Ci cd</a></div></div><div class=post-navigation><div class="post-nav-item post-nav-prev"><span class=post-nav-label>Previous</span>
+<a href=https://mingyu110.github.io/tech-blog-/posts/tech-blog-article/>基于AWS Lambda的MCP智能客服系统：从零到生产的完整实践</a></div><div class="post-nav-item post-nav-next"><span class=post-nav-label>Next</span>
+<a href=https://mingyu110.github.io/tech-blog-/posts/aws-lambda-%E7%9A%84%E5%AE%9E%E8%B7%B5%E4%BC%98%E5%8C%96%E7%BB%8F%E9%AA%8C/>AWS Lambda 函数计算在实际应用落地过程中的生产实践经验</a></div></div></article><style>.post{max-width:800px;margin:0 auto;padding:2rem 0}.post-header{margin-bottom:2rem}.post-title{font-size:2.5rem;line-height:1.2;margin-bottom:1rem;font-weight:800}.post-meta{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;font-size:.95rem;color:var(--text-color);opacity:.7;margin-bottom:1rem}.post-author{font-style:italic}.post-categories{display:flex;flex-wrap:wrap;gap:.5rem}.post-category{padding:.2rem .6rem;border-radius:4px;background-color:var(--primary-color);color:#fff;font-size:.75rem;font-weight:500}.post-featured-image{margin-bottom:2rem;border-radius:8px;overflow:hidden}.post-featured-image img{width:100%;height:auto;display:block}.post-content{font-size:1.1rem;line-height:1.7;margin-bottom:3rem}.post-content p{margin-bottom:1.5rem}.post-content h2{font-size:1.8rem;margin:2.5rem 0 1rem}.post-content h3{font-size:1.5rem;margin:2rem 0 1rem}.post-content ul,.post-content ol{margin-bottom:1.5rem;padding-left:1.5rem}.post-content li{margin-bottom:.5rem}.post-content blockquote{margin:2rem 0;padding:1rem 1.5rem;border-left:4px solid var(--primary-color);background-color:var(--secondary-background);font-style:italic}.post-content img{max-width:100%;height:auto;border-radius:4px;margin:1.5rem 0}.post-content pre{background-color:var(--code-background);padding:1rem;border-radius:4px;overflow-x:auto;margin:1.5rem 0}.post-content code{font-family:sfmono-regular,Consolas,liberation mono,Menlo,monospace;font-size:.9rem;padding:.1rem .3rem;background-color:var(--code-background);border-radius:3px}.post-content pre code{padding:0;background-color:transparent}.post-tags{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:3rem;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color);padding:1.5rem 0}.tags-title{font-weight:600;margin-right:.5rem}.tags-list{display:flex;flex-wrap:wrap;gap:.5rem}.post-tag{padding:.2rem .6rem;border-radius:4px;background-color:var(--secondary-background);border:1px solid var(--border-color);font-size:.8rem;transition:background-color .2s}.post-tag:hover{background-color:var(--border-color)}.post-navigation{display:flex;justify-content:space-between;margin:3rem 0}.post-nav-item{max-width:45%}.post-nav-label{display:block;font-weight:600;font-size:.9rem;margin-bottom:.5rem;opacity:.7}.post-nav-prev{text-align:left}.post-nav-next{text-align:right}.post-comments{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-color)}.comments-title{font-size:1.5rem;margin-bottom:1.5rem}.comments-placeholder{text-align:center;padding:2rem;background-color:var(--secondary-background);border-radius:8px;font-style:italic;opacity:.8}@media(max-width:768px){.post{padding:1rem}.post-title{font-size:2rem}.post-meta{flex-direction:column;align-items:flex-start;gap:.5rem}.post-content{font-size:1rem}.post-navigation{flex-direction:column;gap:1.5rem}.post-nav-item{max-width:100%}}</style></div></main><footer class=footer><div class=footer-container><div class=footer-content><div class=copyright>&copy; 2026 技术博客. All rights reserved.</div><div class=social-links></div></div></div></footer><script>const themeToggle=document.querySelector(".theme-toggle"),prefersDarkScheme=window.matchMedia("(prefers-color-scheme: dark)"),currentTheme=localStorage.getItem("theme")||(prefersDarkScheme.matches?"dark":"light");currentTheme==="dark"&&(document.body.setAttribute("data-theme","dark"),themeToggle.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'),themeToggle.addEventListener("click",()=>{let e="light",t='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';!document.body.getAttribute("data-theme")||document.body.getAttribute("data-theme")==="light"?(document.body.setAttribute("data-theme","dark"),e="dark",t='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'):document.body.removeAttribute("data-theme"),localStorage.setItem("theme",e),themeToggle.innerHTML=t});const menuToggle=document.querySelector(".menu-toggle"),navbar=document.querySelector(".navbar");menuToggle.addEventListener("click",()=>{navbar.classList.toggle("active")}),document.addEventListener("click",e=>{!navbar.contains(e.target)&&!menuToggle.contains(e.target)&&navbar.classList.contains("active")&&navbar.classList.remove("active")})</script></body></html>

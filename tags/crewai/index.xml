@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>CrewAI on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/crewai/</link><description>Recent content in CrewAI on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Sun, 04 May 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/crewai/index.xml" rel="self" type="application/rss+xml"/><item><title>新能源汽车行业智能分析助手</title><link>https://mingyu110.github.io/tech-blog-/posts/%E6%96%B0%E8%83%BD%E6%BA%90%E6%B1%BD%E8%BD%A6%E8%A1%8C%E4%B8%9A%E6%99%BA%E8%83%BD%E5%88%86%E6%9E%90%E5%8A%A9%E6%89%8B/</link><pubDate>Sun, 04 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/%E6%96%B0%E8%83%BD%E6%BA%90%E6%B1%BD%E8%BD%A6%E8%A1%8C%E4%B8%9A%E6%99%BA%E8%83%BD%E5%88%86%E6%9E%90%E5%8A%A9%E6%89%8B/</guid><description>新能源汽车行业智能分析助手 上个月参加了公司的 AI 应用创新大赛，这是我在大赛里提交的作品。
+系统概述 这是一个基于CrewAI多智能体框架和DeepSeek大模型的新能源汽车行业分析系统，可以自动收集、分析新能源汽车相关新闻并生成详细的分析报告。
+系统演示 下面是系统运行的演示：
+技术架构 架构图 下图展示了系统的整体技术架构和组件交互关系：
+系统架构说明 本系统基于以下技术：
+DeepSeek: 强大的大型语言模型，用于新能源汽车行业分析和报告生成 CrewAI: 用于构建专业的多智能体协作框架 Serper API: 用于实时搜索新能源汽车新闻数据 Streamlit: 提供用户友好的界面 Python电子邮件库: 用于发送分析报告 Markdown: 用于格式化分析报告 整个系统包含五个主要功能层：
+用户界面层：基于Streamlit构建的Web应用，提供用户输入表单、定时任务设置和报告预览功能 配置与安全层：管理API密钥和环境变量 核心功能层：包含CrewAI多智能体框架、搜索模块和内容获取模块 处理与分析层：处理多语言内容并进行深度分析 输出层：生成和交付分析报告 系统包含三个专业智能体：
+新能源汽车内容收集专家: 负责收集和整理全球新能源汽车相关的最新信息 新能源汽车行业分析专家: 负责深入分析新能源汽车行业趋势、技术发展和市场变化 新能源汽车分析报告撰写专家: 负责创建高质量、严谨专业且结构清晰的新能源汽车行业分析报告 详细信息 如需了解更多信息，请参考我的GitHub项目：
+新能源汽车行业智能分析助手 - GitHub</description></item></channel></rss>

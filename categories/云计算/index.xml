@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>云计算 on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/categories/%E4%BA%91%E8%AE%A1%E7%AE%97/</link><description>Recent content in 云计算 on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Tue, 20 May 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/categories/%E4%BA%91%E8%AE%A1%E7%AE%97/index.xml" rel="self" type="application/rss+xml"/><item><title>AWS、GCP、阿里云的IAM管理总结与对比</title><link>https://mingyu110.github.io/tech-blog-/posts/awsgcp%E9%98%BF%E9%87%8C%E4%BA%91%E7%9A%84iam%E7%AE%A1%E7%90%86%E7%9A%84%E6%80%BB%E7%BB%93%E5%AF%B9%E6%AF%94/</link><pubDate>Tue, 20 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/awsgcp%E9%98%BF%E9%87%8C%E4%BA%91%E7%9A%84iam%E7%AE%A1%E7%90%86%E7%9A%84%E6%80%BB%E7%BB%93%E5%AF%B9%E6%AF%94/</guid><description>AWS、GCP、阿里云的IAM管理总结与对比 1. 前言 在快速发展的云计算时代，**身份和访问管理（IAM）**已成为企业利用云服务的重要支柱。IAM 不仅仅是一个安全功能，它是决定谁可以访问云资源以及如何访问的基础元素，是任何云采用策略中不可或缺的第一步。通过实施强有力的 IAM 实践，企业可以保护其资产，确保监管合规，并简化访问控制，从而提高整体运营效率。
+IAM 在云计算中的重要性不容小觑。根据 Gartner 2022 年的报告，安全和风险管理领导者正面临 IAM 领域快速增加的干扰，这凸显了有效 IAM 策略的必要性。随着远程工作的普及和云资源的分布化，访问管理变得更加复杂。今天的企业网络包括多样化的用户——包括人类和非人类用户，如员工、客户、承包商、机器人、物联网设备和自动化工作负载。这些用户需要访问分布在本地、远程和云端位置的资源，这需要一个复杂的高级 IAM 框架来维持安全和控制。
+然而，跨不同云提供商导航 IAM 带来了重大挑战。每个主要云平台——AWS、GCP 和阿里云——都提供自己的 IAM 框架，带有独特的术语、结构和方法。这种多样性虽然提供了灵活性，但常常导致用户困惑和复杂性。诸如用户、角色和策略等概念，虽然看似通用，但在这些平台上的实施方式不同，导致学习曲线陡峭，并可能出现误配置。对于采用多云策略的企业来说，这种复杂性进一步放大，因为在不同平台上维持一致的 IAM 政策成为一项艰巨任务。
+所以，本文通过关注核心方面，如用户管理、角色定义、权限结构和组织层次结构，提供对每个平台方法的全面理解。无论是选择云提供商还是管理多云环境的总结。
+2. 核心概念 用户 用户在云计算中是指与云资源交互的身份，既包括人类实体（如员工），也包括工作负载（如应用程序或服务）。AWS明确区分 IAM 用户（人类）和 IAM 角色（工作负载），推荐联邦身份管理；GCP通过&amp;ldquo;主体&amp;rdquo;(principals)统一管理身份，主体包括人类用户和工作负载，人类用 Google 帐户，非人类用服务帐户；阿里云的RAM用户和RAM角色与AWS类似。
+权限和策略 权限是云资源访问的权利，策略是定义这些权限的文档；AWS通过IAM策略（内联和托管）管理权限；GCP通过IAM角色（权限集合）管理；阿里云通过RAM策略（系统和自定义）管理。
+3. 对比表 方面 AWS IAM GCP IAM 阿里云 RAM 用户管理 IAM 用户和组，推荐外部 IdP，AWS IAM Identity Center 集中管理 依赖 Google Identity/Workspace，支持 Google Groups，包含服务账号等实体 RAM 用户和组，支持外部 IdP（如 SAML），适合中国市场 角色功能 角色用于权限假设，适合服务间通信 角色是权限集合，支持继承，适合按职函数定义 角色用于权限假设，支持信任策略，类似 AWS 权限类型 内联策略（嵌入）和托管策略（AWS/客户管理）；内联策略直接嵌入到用户、组或者权限中，不可以共享；托管策略是独立的策略，可附加到多个身份，托管策略支持版本控制和集中管理； 无内联策略，预定义角色（Google 维护）和自定义角色（用户定义） 无内联策略，系统策略（阿里云 维护）和自定义策略（用户管理） 层次与继承 资源级管理，AWS Organizations 提供账户级控制 内置层次（组织&amp;gt;文件夹&amp;gt;项目），支持策略继承 支持资源组织（组织&amp;gt;项目），支持策略继承</description></item><item><title>使用GitHub Actions构建AWS Lambda函数的安全部署流水线</title><link>https://mingyu110.github.io/tech-blog-/posts/lambda_github_actions_deployment/</link><pubDate>Wed, 14 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/lambda_github_actions_deployment/</guid><description>使用GitHub Actions构建AWS Lambda函数的安全部署流水线 详细代码示例可参考 GitHub 仓库
+引言 随着Serverless架构的广泛采用，AWS Lambda已成为构建微服务和事件驱动型应用的首选方案。然而，随着Lambda函数数量的增长，手动部署和更新这些函数变得既耗时又容易出错。本文介绍如何利用GitHub Actions构建一个安全、自动化的部署流水线，通过OpenID Connect (OIDC)身份验证来增强部署过程的安全性。
+为什么需要Lambda函数自动化部署 Serverless架构的普及 随着越来越多的企业采用Serverless函数计算方式构建应用系统，对自动化、安全和合规的部署方案需求日益增长：
+函数数量激增：现代应用可能包含数十甚至上百个独立Lambda函数，手动管理变得不切实际。
+频繁更新：微服务架构下，单个函数更新更加频繁，需要自动化流程支持快速迭代。
+环境一致性：需要确保在开发、测试和生产环境中函数部署的一致性。
+团队协作：多团队并行开发要求标准化的部署流程。
+传统部署方法的局限性 传统的Lambda部署方法存在几个明显缺陷：
+凭证管理风险：使用长期有效的访问密钥进行部署，增加了凭证泄露的风险。
+手动操作错误：人工干预过程容易引入配置错误。
+缺乏审计跟踪：难以追踪谁在何时进行了部署，不利于问题溯源。
+部署延迟：手动流程导致从代码提交到生产环境的时间延长。
+自动化部署的优势 通过GitHub Actions实现Lambda函数的自动化部署，可以带来以下优势：
+提高效率：减少人工干预，加快部署周期，使开发团队专注于业务价值。
+降低错误率：标准化部署流程，消除人为错误。
+可重复性：确保每次部署过程一致且可重复。
+及时反馈：部署问题能被及时发现并解决。
+可追溯性：每次部署都与特定代码提交关联，便于审计和回溯。
+为什么要将安全引入部署流程 安全挑战的增加 攻击面扩大：Serverless架构虽然简化了基础设施管理，但也引入了新的安全挑战。
+身份和访问管理：确保只有授权系统和人员能部署更新至生产环境。
+法规合规要求：各行业对云应用的合规要求日益严格，要求更安全的部署实践。
+安全集成的优势 安全左移：将安全考量融入开发周期的早期阶段，而非事后补救。
+自动化安全检查：在部署前自动进行代码扫描、依赖检查，提前发现漏洞。
+最小权限原则：确保部署过程只使用所需的最小权限，降低安全风险。
+安全审计：提供详细的部署记录，便于安全审计和合规验证。
+架构图 下面是使用GitHub Actions部署AWS Lambda函数的安全流水线架构：出于简化考虑，没有考虑流水线分支管理、CodeReview 等；可以自行根据需要添加即可
+实现步骤 第一阶段：AWS环境配置 1. 创建IAM身份提供商 在AWS控制台中创建OpenID Connect身份提供商：
+# 设置提供商参数 PROVIDER_URL=&amp;#34;https://token.actions.githubusercontent.com&amp;#34; AUDIENCE=&amp;#34;sts.amazonaws.com&amp;#34; 2. 创建IAM角色 创建具有Lambda部署权限的IAM角色，添加一个更全面的内联策略，允许创建和管理Lambda函数：
+{ &amp;#34;Version&amp;#34;: &amp;#34;2012-10-17&amp;#34;, &amp;#34;Statement&amp;#34;: [ { &amp;#34;Effect&amp;#34;: &amp;#34;Allow&amp;#34;, &amp;#34;Action&amp;#34;: [ &amp;#34;lambda:CreateFunction&amp;#34;, &amp;#34;lambda:UpdateFunctionCode&amp;#34;, &amp;#34;lambda:UpdateFunctionConfiguration&amp;#34;, &amp;#34;lambda:GetFunction&amp;#34;, &amp;#34;lambda:PublishVersion&amp;#34;, &amp;#34;lambda:CreateAlias&amp;#34;, &amp;#34;lambda:UpdateAlias&amp;#34;, &amp;#34;lambda:TagResource&amp;#34; ], &amp;#34;Resource&amp;#34;: &amp;#34;arn:aws:lambda:&amp;lt;region&amp;gt;:&amp;lt;account-id&amp;gt;:function:&amp;lt;function-name&amp;gt;&amp;#34; }, { &amp;#34;Effect&amp;#34;: &amp;#34;Allow&amp;#34;, &amp;#34;Action&amp;#34;: [ &amp;#34;iam:PassRole&amp;#34; ], &amp;#34;Resource&amp;#34;: &amp;#34;arn:aws:iam::&amp;lt;account-id&amp;gt;:role/lambda-execution-role&amp;#34;, &amp;#34;Condition&amp;#34;: { &amp;#34;StringEquals&amp;#34;: { &amp;#34;iam:PassedToService&amp;#34;: &amp;#34;lambda.</description></item><item><title>Java应用在函数计算(Serverless)环境中的冷启动优化实践</title><link>https://mingyu110.github.io/tech-blog-/posts/java-serverless-optimization/</link><pubDate>Wed, 07 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/java-serverless-optimization/</guid><description>Java应用在函数计算(Serverless)环境中的冷启动优化实践-以 AWS Lambda 为示范 前言 由于我之前在云计算公司工作多年，深刻体会到Serverless技术对于某些应用场景在成本、效率、运维复杂度的优势，因此在目前就职的某车企，我也对于一些技术走在前面且愿意使用公有云的部门在推广函数计算，考虑到内部很多应用是采用Java开发的，所以这里总结一份函数计算对于Java应用在不同场景下的冷启动优化实践。本文以AWS为例，实际上对于国内云厂商，虽然也有函数计算产品，但是在某些功能例如AWS SnapStart 目前并不具备，当然本文我们不做云厂商产品对比分析评估。
+1. Java应用在函数计算中的冷启动问题 1.1 冷启动概念与影响 函数计算采用按需执行、按使用量付费的模式，当一个函数长时间未被调用时，其执行环境会被回收，下次调用时需要重新创建执行环境，导致延迟增加，这就是**&amp;ldquo;冷启动&amp;quot;问题**。
+对于Java应用，冷启动问题尤为明显，主要由以下因素造成：
+JVM启动与类加载耗时长 依赖库较多，初始化复杂 内存消耗高，初始化资源密集 代码编译优化(JIT)需要时间积累 实测数据表明，未经优化的Java Lambda函数冷启动时间通常在3-10秒范围，而对应的Go或Node.js应用则在几百毫秒内。
+1.2 冷启动优化的商业价值 优化冷启动时间具有以下商业价值：
+增强用户体验：缩短API响应时间，提升用户满意度 降低成本：减少函数执行时间，降低计费标准 提高可靠性：减少因冷启动导致的超时失败 扩展应用场景：使更多对延迟敏感的业务适合Serverless架构 2. Java冷启动优化技术 2.1 GraalVM Native Image技术 GraalVM Native Image将Java应用预编译为独立的原生可执行文件，是解决冷启动问题最彻底的技术之一。
+技术原理：
+在构建阶段进行静态分析（闭包分析） 预先编译为特定平台的机器码 包含应用程序及其依赖项的子集 内置专用的运行时系统取代完整JVM 示例配置：
+&amp;lt;plugin&amp;gt; &amp;lt;groupId&amp;gt;org.graalvm.buildtools&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;native-maven-plugin&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;0.9.20&amp;lt;/version&amp;gt; &amp;lt;configuration&amp;gt; &amp;lt;imageName&amp;gt;native-lambda&amp;lt;/imageName&amp;gt; &amp;lt;buildArgs&amp;gt; &amp;lt;buildArg&amp;gt;--no-fallback&amp;lt;/buildArg&amp;gt; &amp;lt;buildArg&amp;gt;-H:+ReportExceptionStackTraces&amp;lt;/buildArg&amp;gt; &amp;lt;buildArg&amp;gt;--static&amp;lt;/buildArg&amp;gt; &amp;lt;buildArg&amp;gt;--libc=musl&amp;lt;/buildArg&amp;gt; &amp;lt;/buildArgs&amp;gt; &amp;lt;/configuration&amp;gt; &amp;lt;/plugin&amp;gt; 优点：
+冷启动时间减少90-95% 内存消耗大幅降低 资源利用率提高 缺点：
+构建复杂度增加 与现有Java生态系统集成存在挑战 对反射、序列化等动态特性支持有限 2.2 Lambda Layers与预热策略 Lambda Layers允许将共享代码提取为独立层，可被多个函数引用，有助于减轻冷启动。
+技术原理：</description></item><item><title>AWS云资源成本及合规自动化优化方案</title><link>https://mingyu110.github.io/tech-blog-/posts/aws%E4%BA%91%E8%B5%84%E6%BA%90%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96%E6%96%B9%E6%A1%88/</link><pubDate>Thu, 01 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/aws%E4%BA%91%E8%B5%84%E6%BA%90%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96%E6%96%B9%E6%A1%88/</guid><description>一、功能特性 资源合规监控
+检测未标记的资源（EC2、S3、RDS 等） 检测闲置的 EC2 实例 监控安全组开放端口 实时监控新创建或状态变更的资源 自动化操作
+自动为不合规资源添加标签 自动停止闲置的 EC2 实例 发送实时通知到钉钉 成本异常检测
+每日自动分析 AWS 成本数据 检测成本异常（超过过去 7 天平均值的设定阈值） 发送详细异常报告并提供处理建议 二、架构概述 本解决方案采用无服务器架构，主要由以下组件构成：
+AWS Config：负责持续监控和记录 AWS 资源配置变更，检测不合规的资源 AWS EventBridge：处理各类事件触发器，如 Config 规则变更、EC2 状态变更 AWS Lambda：提供自动化处理逻辑，包括资源合规处理和成本异常检测 AWS SNS：用于消息通知路由 钉钉通知：通过自定义的钉钉机器人发送通知和警报 整个解决方案通过 Terraform 实现基础设施即代码（IaC），便于版本控制和持续部署。
+三、AWS 服务说明 本解决方案使用了以下 AWS 服务：
+AWS Config - 提供 AWS 资源清单、配置历史和配置变更通知的服务，使您能够进行合规性审核、安全性分析、资源变更跟踪和故障排除。
+AWS EventBridge - 无服务器事件总线服务，使应用程序能够轻松地从各种来源接收事件数据并响应这些事件。在本解决方案中用于处理 Config 规则变更和 EC2 状态变更事件。
+AWS Lambda - 无服务器计算服务，允许您运行代码而无需配置或管理服务器。在本解决方案中用于执行资源合规处理和成本异常检测逻辑。
+AWS SNS (Simple Notification Service) - 高度可用、持久、安全、完全托管的发布/订阅消息收发服务，支持分离微服务、分布式系统和无服务器应用程序。在本解决方案中用于通知路由。</description></item></channel></rss>

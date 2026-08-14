@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>工具 on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/%E5%B7%A5%E5%85%B7/</link><description>Recent content in 工具 on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Fri, 02 May 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/%E5%B7%A5%E5%85%B7/index.xml" rel="self" type="application/rss+xml"/><item><title>PDF转 Markdown 实现</title><link>https://mingyu110.github.io/tech-blog-/posts/pdf%E8%BD%ACmarkdown%E5%AE%9E%E7%8E%B0/</link><pubDate>Fri, 02 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/pdf%E8%BD%ACmarkdown%E5%AE%9E%E7%8E%B0/</guid><description>简介 由于经常需要将一些 PDF 文档转为 Markdown 以便后续的处理点评修改等工作需要，所以借助AI 技术实现了 PDF 抓 Markdown 的工具。
+项目介绍 本工具可以将PDF文件高效地转换为Markdown格式，保留文档的结构和格式，便于后续编辑和处理。
+主要功能 PDF文档解析与内容提取 文档结构识别与保留 Markdown格式转换 表格、图片等复杂元素处理 技术实现 工具基于AI技术实现了PDF内容的智能识别和转换，相比传统OCR方法，能更好地保留文档的原始结构。
+使用方法 详细的使用方法和示例可以在GitHub仓库中找到：
+PDF转Markdown工具
+优势 高保真度转换 处理速度快 支持复杂PDF文档 减少手动排版工作 应用场景 技术文档转换与整理 学术论文处理 报告文档格式转换 内容管理系统导入</description></item></channel></rss>

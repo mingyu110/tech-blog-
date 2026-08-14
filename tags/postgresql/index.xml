@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>PostgreSQL on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/postgresql/</link><description>Recent content in PostgreSQL on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Wed, 31 Dec 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/postgresql/index.xml" rel="self" type="application/rss+xml"/><item><title>使用 PostgreSQL 行级安全（RLS）实现多租户数据隔离</title><link>https://mingyu110.github.io/tech-blog-/posts/multi-tenant-data-isolation-with-postgresql-row-level-security/</link><pubDate>Wed, 31 Dec 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/multi-tenant-data-isolation-with-postgresql-row-level-security/</guid><description>使用 PostgreSQL 行级安全（RLS）实现多租户数据隔离 对于软件即服务（SaaS）提供商而言，隔离租户数据是一项基本职责。如果某个租户获取了另一个租户的数据，不仅会失去用户信任，还可能对品牌造成永久性损害，甚至导致业务流失。
+鉴于此类风险的严重性，制定有效的数据隔离方案至关重要。多租户架构通过为所有租户共享数据存储资源（而非为每个租户复制资源），实现了灵活性提升和运营成本降低。然而，由于在共享模型中难以实施隔离，很多团队可能会妥协于多租户数据模型，转而采用成本更高的 “单租户单数据库” 方案。
+在共享数据库模型中，通常只能依赖软件开发人员在每条 SQL 语句中实现适当的检查逻辑。与其他安全问题类似，我们希望以更集中的方式执行租户数据隔离策略，减少对日常代码变动的依赖。
+本文面向 SaaS 架构师和开发人员，探讨一种既能享受租户共享数据库的优势，又能实现集中化隔离管控的方案。
+数据分区方案 多租户系统中常用的三种数据分区模型包括：独立数据库模型（Silo）、共享数据库独立 Schema 模型（Bridge）和共享数据库共享 Schema 模型（Pool）。每种模型在隔离性实施方面各有优劣。
+独立数据库模型（Silo）：为每个租户分配独立的数据库实例。这种方式隔离性最强，但基础设施成本更高，且租户接入流程更复杂 —— 因为每个新租户都需要创建和管理新的数据库实例。 共享数据库独立 Schema 模型（Bridge）：多个租户共享同一数据库实例，但每个租户使用独立的 Schema。该模型通过资源共享降低成本，但维护和租户接入流程仍较复杂。 共享数据库共享 Schema 模型（Pool）：所有租户共享数据库实例和命名空间。在此模型中，所有租户数据共存，但每张表或视图都包含一个分区键（通常是租户标识），用于过滤数据。 共享数据库共享 Schema 模型（Pool）能最大程度降低运营成本，减少基础设施代码和维护开销。但该模型难以实施数据访问策略，通常依赖于开发人员在每条 SQL 语句中正确添加WHERE子句来过滤租户数据。
+有关多租户数据分区的更多信息，请参阅AWS SaaS Factory 白皮书。
+行级安全（RLS） 通过在数据库层面集中执行关系型数据库管理系统（RDBMS）的隔离策略，可以减轻软件开发人员的负担。这使得我们既能享受共享数据库模型（Pool）的优势，又能降低跨租户数据访问的风险。
+PostgreSQL 9.5 及更高版本提供了行级安全（Row Level Security，RLS）功能。当为表定义安全策略后，这些策略会限制SELECT查询返回的行，以及INSERT、UPDATE、DELETE命令影响的行。Amazon 关系型数据库服务（RDS）的 Amazon Aurora for PostgreSQL 和 RDS for PostgreSQL 引擎均支持 RLS。更多信息请参见 PostgreSQL 官网的行安全策略文档。
+RLS 策略具有名称，可通过ALTER语句应用于表或从表中移除。策略通过USING子句定义，该子句返回布尔值，用于判断是否处理表中的某一行。一张表可以同时应用多个策略，以实现复杂的安全控制。此外，策略可覆盖所有语句类型（SELECT、INSERT、UPDATE、DELETE），也可针对读取和修改操作设置不同策略。如果为SELECT和修改操作设置不同策略，则必须在策略定义中包含WITH CHECK子句。
+可以将 RLS 策略理解为数据库引擎自动管理的WHERE子句。
+代码示例 创建带 RLS 策略的表 以下代码展示了如何在表定义中创建 RLS 策略：</description></item></channel></rss>

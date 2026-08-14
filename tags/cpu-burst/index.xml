@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>CPU Burst on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/cpu-burst/</link><description>Recent content in CPU Burst on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Sun, 04 May 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/cpu-burst/index.xml" rel="self" type="application/rss+xml"/><item><title>Kubernetes中的CPU Burst机制：容器性能调优指南</title><link>https://mingyu110.github.io/tech-blog-/posts/kubernetes-cpu-burst-guide/</link><pubDate>Sun, 04 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/kubernetes-cpu-burst-guide/</guid><description>Kubernetes中的CPU Burst机制：容器性能调优指南 在我的工作经历里，多次进行了容器化应用在Kubernetes部署环境的性能诊断与优化，本文是对 CPU Burst在应对容器化应用的 CPU 节流问题的技术总结。
+1. 概述 本文档详细介绍Kubernetes环境中的CPU Burst功能，这是一种能够有效缓解容器CPU节流问题、提升应用性能的关键技术。在多线程、高并发和对延迟敏感的工作负载中，CPU Burst可以显著改善服务质量，降低响应时延，提高资源利用率。
+2. 问题背景 2.1 K8S资源限制与CFS调度 Kubernetes使用Linux内核的完全公平调度器(CFS)实现CPU资源限制。默认情况下，CFS在100毫秒的周期(cfs_period_us)内强制执行容器的CPU配额(cfs_quota_us)。当容器在一个周期内用尽配额时，所有进程将被节流(Throttled)直到下一个周期开始。
+2.2 CPU节流导致的性能问题 如上图所示，即使容器的平均CPU使用率远低于其限制，容器依然可能因短时间内的高CPU使用而被节流。这会导致：
+请求响应时间延长(RTT增加) 活性探测失败导致容器重启 微服务调用链超时 垃圾回收停顿延长 网络连接中断 2.3 多线程应用的特殊挑战 多线程应用在CFS调度器下面临更严重的问题：
+以10个线程并行运行在2核CPU限制的场景为例：
+每个线程在独立核心上运行时，第一个20毫秒就累计消耗200毫秒CPU时间 超出配额后，所有线程被同时节流80毫秒 任务完成时间从理想的50毫秒延长到210毫秒(性能下降76%) 3. CPU Burst功能介绍 3.1 工作原理 CPU Burst功能能够动态感知CPU节流现象并对容器参数进行自适应调节。它通过以下机制工作：
+积累未使用的CPU时间片：在低负载时，容器可以&amp;quot;存储&amp;quot;未用完的CPU时间配额 动态调整CFS参数：根据容器的历史CPU使用模式调整cgroup参数 弹性资源分配：在负载高峰期临时提供额外CPU资源 3.2 核心技术指标 CPU Burst主要通过调整以下cgroup参数实现：
+cpu.cfs_quota_us：容器在一个周期内可使用的最大CPU时间 cpu.cfs_burst_us：容器可以借用的额外CPU时间(适用于支持该特性的内核) cpu.cfs_period_us：CPU配额计算的时间周期(默认100毫秒) 4. 实施方案 4.1 阿里云ACK集群启用CPU Burst 在阿里云ACK集群中，可通过以下两种方式启用CPU Burst：
+方法一：通过Pod注解配置
+apiVersion: apps/v1 kind: Deployment metadata: name: nginx-deployment spec: template: metadata: annotations: koordinator.sh/cpuBurst: &amp;#39;{&amp;#34;policy&amp;#34;:&amp;#34;auto&amp;#34;,&amp;#34;cpuBurstPercent&amp;#34;:200,&amp;#34;cfsQuotaBurstPercent&amp;#34;:300}&amp;#39; 方法二：通过ConfigMap在集群或命名空间级别配置</description></item></channel></rss>

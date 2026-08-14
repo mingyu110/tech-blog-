@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Java on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/java/</link><description>Recent content in Java on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Mon, 29 Dec 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/java/index.xml" rel="self" type="application/rss+xml"/><item><title>Spring Boot 高级工程实践与核心原理深度解析</title><link>https://mingyu110.github.io/tech-blog-/posts/springboot_advanced_practices_guide/</link><pubDate>Mon, 29 Dec 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/springboot_advanced_practices_guide/</guid><description>Spring Boot 高级工程实践与核心原理深度解析 前言 本指南是本人对SpringBoot在生产级开发的工程实践总结，目标是为Java开发者提供一套系统化、深入的工程实践与核心原理讲解。内容涵盖从基础的编码设计原则，到API设计、数据访问、并发编程、再到安全配置等多个维度。每个主题都将结合理论与代码示例，并附有详尽的注释，力求帮助开发者构建出高质量、高可维护性、高安全性的企业级应用程序。
+第一章：编码与设计原则 1.1 SOLID 设计原则 SOLID是五个面向对象设计基本原则的缩写，遵循它们有助于创建易于理解、维护和扩展的软件。
+单一职责原则 (SRP): 一个类应该只有一个引起它变化的原因。 开闭原则 (OCP): 软件实体应对扩展开放，对修改关闭。 里氏替换原则 (LSP): 子类型必须能够替换掉它们的基类型。 接口隔离原则 (ISP): 客户端不应被迫依赖于它们不使用的方法。 依赖倒置原则 (DIP): 高层模块不应依赖于低层模块，两者都应依赖于抽象。 代码示例：开闭原则（OCP） 反例：
+// 反例：每当增加新的通知方式，都需要修改此类 public class NotificationService { public void sendNotification(String type, String message) { if (&amp;#34;email&amp;#34;.equals(type)) { // send email logic... } else if (&amp;#34;sms&amp;#34;.equals(type)) { // send sms logic... } // 当需要增加 push 通知时，必须修改此方法 } } 正例：
+/** * 1. 定义一个统一的通知器接口（抽象）。 * 这是“对修改关闭”的基础。 */ public interface Notifier { void send(String message); } /** * 2.</description></item><item><title>15个在真实后端项目中必用的Java性能优化技巧</title><link>https://mingyu110.github.io/tech-blog-/posts/15-practical-java-performance-tips/</link><pubDate>Thu, 31 Jul 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/15-practical-java-performance-tips/</guid><description>15个在真实后端项目中必用的Java性能优化技巧 1. 引言：性能优化的架构师思维 在软件工程领域，性能优化并非一个孤立的技术点，而是一种贯穿于架构设计、代码实现到运维监控全流程的系统性思维。一个高性能的后端系统，其成功并非源于某个神秘的配置参数，而是建立在一系列审慎的技术选型、编码习惯和架构决策之上。
+本文旨在分享15个在真实生产环境中经过反复验证、行之有效的Java性能优化技巧。这些技巧覆盖了从网络通信、内存管理、并发编程到数据库交互的多个维度，旨在帮助开发者和架构师构建出更快速、更稳定、更具扩展性的后端服务。
+在深入探讨具体技巧之前，我们先来看一个典型的后端微服务架构，后续的优化建议都将围绕此类架构展开：
+graph TD A[客户端] --&amp;gt; B[API网关]; B --&amp;gt; C{核心业务API服务 (Spring Boot)}; C --&amp;gt; D[分布式缓存 (Redis)]; C --&amp;gt; E{服务层/业务逻辑}; E --&amp;gt; F[消息队列 (Kafka)]; E --&amp;gt; G[数据库 (PostgreSQL/MySQL)]; 我们的目标是，通过一系列微小的、有针对性的改进，让这套系统的整体性能得到显著提升。
+2. 网络与序列化优化 技巧1：在DTO中使用@JsonInclude(Include.NON_NULL) 问题：在JSON序列化过程中，null值的字段不仅会占用网络带宽，还会在客户端（尤其是移动端）增加不必要的解析开销和内存占用。
+解决方案：通过在DTO（数据传输对象）上添加Jackson注解@JsonInclude(JsonInclude.Include.NON_NULL)，可以指示序列化器忽略所有值为null的字段。
+Java伪代码示例：
+import com.fasterxml.jackson.annotation.JsonInclude; // 通过此注解，当phone字段为null时，它将不会出现在最终的JSON输出中 @JsonInclude(JsonInclude.Include.NON_NULL) public class UserDto { private String name; private String email; private String phone; // getters and setters } 效果：此举可将JSON负载大小减少20%-40%，并降低客户端的GC（垃圾回收）压力。
+技巧2：使用Java 11+的HttpClient替代RestTemplate 问题：Spring框架早期的RestTemplate是一个同步、阻塞式的HTTP客户端，在高并发场景下，它会为每个请求独占一个线程，极易成为系统的性能瓶颈。
+解决方案：切换到Java 11原生提供的HttpClient。它是一个支持异步、非阻塞I/O的现代化客户端，能更高效地利用系统资源。
+Java伪代码示例：
+import java.net.http.HttpClient; import java.</description></item><item><title>Java应用在函数计算(Serverless)环境中的冷启动优化实践</title><link>https://mingyu110.github.io/tech-blog-/posts/java-serverless-optimization/</link><pubDate>Wed, 07 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/java-serverless-optimization/</guid><description>Java应用在函数计算(Serverless)环境中的冷启动优化实践-以 AWS Lambda 为示范 前言 由于我之前在云计算公司工作多年，深刻体会到Serverless技术对于某些应用场景在成本、效率、运维复杂度的优势，因此在目前就职的某车企，我也对于一些技术走在前面且愿意使用公有云的部门在推广函数计算，考虑到内部很多应用是采用Java开发的，所以这里总结一份函数计算对于Java应用在不同场景下的冷启动优化实践。本文以AWS为例，实际上对于国内云厂商，虽然也有函数计算产品，但是在某些功能例如AWS SnapStart 目前并不具备，当然本文我们不做云厂商产品对比分析评估。
+1. Java应用在函数计算中的冷启动问题 1.1 冷启动概念与影响 函数计算采用按需执行、按使用量付费的模式，当一个函数长时间未被调用时，其执行环境会被回收，下次调用时需要重新创建执行环境，导致延迟增加，这就是**&amp;ldquo;冷启动&amp;quot;问题**。
+对于Java应用，冷启动问题尤为明显，主要由以下因素造成：
+JVM启动与类加载耗时长 依赖库较多，初始化复杂 内存消耗高，初始化资源密集 代码编译优化(JIT)需要时间积累 实测数据表明，未经优化的Java Lambda函数冷启动时间通常在3-10秒范围，而对应的Go或Node.js应用则在几百毫秒内。
+1.2 冷启动优化的商业价值 优化冷启动时间具有以下商业价值：
+增强用户体验：缩短API响应时间，提升用户满意度 降低成本：减少函数执行时间，降低计费标准 提高可靠性：减少因冷启动导致的超时失败 扩展应用场景：使更多对延迟敏感的业务适合Serverless架构 2. Java冷启动优化技术 2.1 GraalVM Native Image技术 GraalVM Native Image将Java应用预编译为独立的原生可执行文件，是解决冷启动问题最彻底的技术之一。
+技术原理：
+在构建阶段进行静态分析（闭包分析） 预先编译为特定平台的机器码 包含应用程序及其依赖项的子集 内置专用的运行时系统取代完整JVM 示例配置：
+&amp;lt;plugin&amp;gt; &amp;lt;groupId&amp;gt;org.graalvm.buildtools&amp;lt;/groupId&amp;gt; &amp;lt;artifactId&amp;gt;native-maven-plugin&amp;lt;/artifactId&amp;gt; &amp;lt;version&amp;gt;0.9.20&amp;lt;/version&amp;gt; &amp;lt;configuration&amp;gt; &amp;lt;imageName&amp;gt;native-lambda&amp;lt;/imageName&amp;gt; &amp;lt;buildArgs&amp;gt; &amp;lt;buildArg&amp;gt;--no-fallback&amp;lt;/buildArg&amp;gt; &amp;lt;buildArg&amp;gt;-H:+ReportExceptionStackTraces&amp;lt;/buildArg&amp;gt; &amp;lt;buildArg&amp;gt;--static&amp;lt;/buildArg&amp;gt; &amp;lt;buildArg&amp;gt;--libc=musl&amp;lt;/buildArg&amp;gt; &amp;lt;/buildArgs&amp;gt; &amp;lt;/configuration&amp;gt; &amp;lt;/plugin&amp;gt; 优点：
+冷启动时间减少90-95% 内存消耗大幅降低 资源利用率提高 缺点：
+构建复杂度增加 与现有Java生态系统集成存在挑战 对反射、序列化等动态特性支持有限 2.2 Lambda Layers与预热策略 Lambda Layers允许将共享代码提取为独立层，可被多个函数引用，有助于减轻冷启动。
+技术原理：</description></item></channel></rss>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>数据一致性 on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7/</link><description>Recent content in 数据一致性 on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Wed, 30 Jul 2025 12:00:00 +0800</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7/index.xml" rel="self" type="application/rss+xml"/><item><title>高并发一致性分布式计数器架构扩展实践演进：设计每秒十万请求量级的视图计数系统</title><link>https://mingyu110.github.io/tech-blog-/posts/distributed-counter-architecture-practice/</link><pubDate>Wed, 30 Jul 2025 12:00:00 +0800</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/distributed-counter-architecture-practice/</guid><description>高并发一致性分布式计数器架构扩展实践演进：设计每秒十万请求量级的视图计数系统 摘要 本文旨在深入探讨如何设计一个能够应对海量请求（例如，超过10万RPS）的分布式视频视图计数系统。我们将从一个基础的架构方案入手，逐步分析其在可扩展性、性能和数据一致性等方面遇到的瓶颈与挑战。通过四次架构迭代——从单体数据库到分片数据库，再到内存聚合，最终演进至基于事件驱动的流处理架构——我们将系统性地展示如何解决高并发写入、热点分区、数据持久化和幂等性等关键问题。本文不仅提供了具体的技术选型（如Kafka、Flink、Redis）和设计权衡，还总结了一套通用的分布式系统设计方法论，为构建其他大规模计数应用（如广告点击、社交媒体点赞等）提供参考。
+1. 核心性能指标解析 (RPS, QPS, PV, UV) 在深入架构设计之前，我们首先需要明确衡量系统负载和用户活动的核心指标，这对于理解我们的设计目标至关重要。
+产品和运营更加关注UV和PV；技术和运维更加关注RPS和QPS。
+UV (Unique Visitor - 独立访客数)
+视角: 用户客户端。 含义: 在特定时间段内（通常是一天）访问网站的独立用户数量。无论一个用户当天访问多少次，都只被记为一个UV。这是衡量产品覆盖范围和真实用户规模的核心指标。 PV (Page View - 页面浏览量)
+视角: 用户客户端。 含义: 网站或应用中某个页面被加载或刷新的总次数。一个UV可以产生多个PV，该指标反映了用户的活跃度和内容的受欢迎程度。 RPS (Requests Per Second - 每秒请求数)
+视角: 应用服务器端。 含义: 应用服务器每秒钟实际处理的请求总数。一个PV通常会触发多个RPS（如HTML、API、图片等请求）。RPS直接反映了服务器的处理能力和当前负载，是容量规划和性能压测的关键指标。 QPS (Queries Per Second - 每秒查询数)
+视角: 后端服务（如数据库）。 含义: 特指对某个后端服务（尤其是数据库）的每秒查询次数。一个RPS请求可能会导致多个QPS。例如，一个API请求（1 RPS）可能需要查询3次数据库（3 QPS）。QPS是衡量后端服务负载压力的关键指标。 关系链: 一个UV -&amp;gt; 访问了多个PV -&amp;gt; 触发了海量的RPS -&amp;gt; 导致了更多的QPS。
+2. 引言 2.1 问题背景 某流媒体应用的热门视频拥有数百亿的播放量，这一数字的背后是一个高并发、高可用的分布式计数系统。表面上看，实现视图计数似乎只是简单的累加操作，但当系统需要处理每日数十亿次的观看请求，并应对“病毒式”传播视频带来的流量洪峰时，问题的复杂性便显现出来。如何在保证数据精确性的同时，满足系统的可扩展性和性能要求，是每个大型内容平台都必须解决的核心技术挑战。
+2.2 本文目标 本文将从零开始，设计一个完整的视频视图计数系统。我们将遵循以下演进路径：
+优秀的架构实践要遵循：1）适配业务和团队技术能力的当前现状；2）架构具备向前演进性和向后兼容性；3）架构的过程设计文档要规范专业；
+定义问题：明确系统的功能性与非功能性需求。 基础方案：提出一个最简单的实现方案，并分析其局限性。 架构迭代：通过多次迭代，逐步优化架构，解决扩展性、性能、数据一致性等问题。 最终方案：构建一个基于事件驱动和流处理的、满足所有需求的健壮系统。 通过本文，读者将掌握设计大规模分布式计数系统的核心原则与权衡策略，提升系统设计能力。</description></item></channel></rss>

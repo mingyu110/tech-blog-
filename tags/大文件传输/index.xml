@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>大文件传输 on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/%E5%A4%A7%E6%96%87%E4%BB%B6%E4%BC%A0%E8%BE%93/</link><description>Recent content in 大文件传输 on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Thu, 18 Sep 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/%E5%A4%A7%E6%96%87%E4%BB%B6%E4%BC%A0%E8%BE%93/index.xml" rel="self" type="application/rss+xml"/><item><title>使用分段上传和传输加速向Amazon S3上传大对象</title><link>https://mingyu110.github.io/tech-blog-/posts/upload_large_objects_to_amazon_s3_using_multipart_upload_and_transfer_acceleration/</link><pubDate>Thu, 18 Sep 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/upload_large_objects_to_amazon_s3_using_multipart_upload_and_transfer_acceleration/</guid><description>使用分段上传和传输加速向Amazon S3上传大对象 1. 引言 Web和移动应用程序常常需要将大文件对象（如高清照片、视频文件）上传到云端。例如，Amazon Photos 这类服务就允许用户从浏览器或移动端上传大型媒体文件。
+Amazon S3 是存储大对象的理想选择，它不仅支持高达5TB的单个对象，还提供了分段上传（Multipart Upload）和传输加速（Transfer Acceleration）功能，以显著缩短上传时间。
+2. 应用场景与技术挑战 2.1. 应用场景 当开发者需要从Web或移动应用向云端上传大文件时，例如：
+社交媒体平台的用户上传高清视频。 在线教育平台的教师上传课程视频。 企业网盘用户上传大型设计文件或备份数据。 医疗影像系统上传DICOM等大型医疗影像文件。 2.2. 技术挑战 在此类场景下，开发者通常面临以下挑战：
+网络吞吐量限制：单个HTTP连接受限于底层的TCP吞吐量，无法充分利用所有可用带宽，导致上传速度缓慢。 网络延迟与不稳定性：广域网的延迟和网络质量波动，可能导致用户体验不佳或上传中断。 安全性问题：直接在客户端暴露长期有效的AWS访问凭证，会带来严重的安全风险。 大文件上传失败的恢复成本：如果一个巨大的文件在上传过程中因网络问题中断，从头开始重传会浪费大量时间和带宽。 3. 解决方案与技术选型 为了应对上述挑战，我们采用以Amazon S3为核心的解决方案，结合使用其预签名URL（Presigned URLs）、**分段上传（Multipart Upload）和传输加速（Transfer Acceleration）**功能。该方案能够安全地提升上传吞吐量，最小化网络错误导致的重传，并通过全球边缘节点降低网络延迟，为全球用户提供一致的高性能体验。
+下方是该解决方案的参考架构图。
+解决方案流程解析:
+发起上传请求：Web或移动应用（前端）通过Amazon API Gateway与云端后端通信，以启动和完成分段上传流程。 处理后端逻辑：AWS Lambda函数代表前端应用调用S3 API，处理如创建分段上传、生成预签名URL等需要安全凭证的操作。 执行文件上传：前端应用使用获取到的预签名URL，通过S3传输加速节点，将大文件的各个部分直接上传到S3。 边缘加速：文件上传流量被路由到距离用户最近的AWS边缘站点（Edge Location），从而有效降低网络延迟，随后通过AWS优化的内部网络传输到目标S3存储桶。 3.1. 使用S3分段上传（Multipart Upload）提升效率 分段上传允许应用程序将一个大对象拆分成一组较小的部分并行上传。所有部分上传完成后，S3会将它们在云端组合成原始的大对象。
+分段上传的优势:
+提高吞吐量：通过并行上传多个部分，可以更好地利用网络带宽。 增强恢复能力：当网络错误导致某个部分上传失败时，只需重新上传该部分，而无需从头开始，提高了上传的健壮性。 分段上传的核心三步流程:
+启动 (Initiate)：调用CreateMultipartUpload API来启动一个分段上传任务，S3会返回一个全局唯一的UploadId。 上传分片 (Upload Parts)：将大文件分割成多个部分。为每个部分调用UploadPart API（通常结合预签名URL）来并行上传。 完成 (Complete)：所有部分上传成功后，调用CompleteMultipartUpload API，并提供所有部分的编号和ETag列表，S3将根据这些信息在服务器端完成对象的合并。 当与预签名URL结合使用时，分段上传允许应用程序以一种安全、有时限的方式上传大对象，而无需在客户端存储或暴露私有的存储桶凭证。
+以下Lambda函数示例展示了如何代表Web或移动应用启动一个分段上传：
+// 使用AWS SDK for JavaScript v2 // 调用S3的createMultipartUpload方法来初始化一个分段上传任务 const multipartUpload = await s3.</description></item></channel></rss>

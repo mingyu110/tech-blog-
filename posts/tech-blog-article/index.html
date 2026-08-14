@@ -1,0 +1,647 @@
+<!doctype html><html lang=zh-cn><head><meta charset=UTF-8><script src=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js></script><meta name=viewport content="width=device-width,initial-scale=1"><title>基于AWS Lambda的MCP智能客服系统：从零到生产的完整实践 - 技术博客</title>
+<meta name=description content="深度解析Model Context Protocol (MCP) v2025.03.26在AWS无服务器架构中的实现，包含完整的部署自动化、问题排查和最佳实践"><link rel=icon href=/tech-blog-/favicon.ico><style>:root{--primary-color:#0066cc;--text-color:#333;--background-color:#fff;--secondary-background:#f5f5f5;--border-color:#eaeaea;--link-color:#0066cc;--link-hover-color:#004080;--code-background:#f5f5f5;--code-color:#d63384;--blockquote-border:#ddd;--blockquote-background:#f9f9f9;--header-background:rgba(255, 255, 255, 0.95);--footer-background:#f5f5f5;--max-width:800px}[data-theme=dark]{--primary-color:#3d91ff;--text-color:#e0e0e0;--background-color:#1a1a1a;--secondary-background:#2a2a2a;--border-color:#383838;--link-color:#3d91ff;--link-hover-color:#66a6ff;--code-background:#2d2d2d;--code-color:#ff7b9d;--blockquote-border:#555;--blockquote-background:#2d2d2d;--header-background:rgba(26, 26, 26, 0.95);--footer-background:#222}*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,segoe ui,Roboto,Oxygen,Ubuntu,Cantarell,open sans,helvetica neue,sans-serif;line-height:1.6;color:var(--text-color);background-color:var(--background-color);transition:background-color .3s,color .3s}a{color:var(--link-color);text-decoration:none;transition:color .2s}a:hover{color:var(--link-hover-color)}img{max-width:100%;height:auto}.header{background-color:var(--header-background);padding:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1);position:sticky;top:0;z-index:100;backdrop-filter:blur(5px)}.header-container,.main-container,.footer-container{max-width:var(--max-width);margin:0 auto;padding:0 1.5rem}.header-content{display:flex;justify-content:space-between;align-items:center}.logo a{font-size:1.5rem;font-weight:700;color:var(--text-color)}.navbar{display:flex;align-items:center;gap:1.5rem}.navbar a{color:var(--text-color);font-weight:500}.navbar a:hover{color:var(--primary-color)}.theme-toggle,.menu-toggle{background:0 0;border:none;cursor:pointer;color:var(--text-color);font-size:1.2rem;display:flex;align-items:center;justify-content:center;padding:.25rem}.menu-toggle{display:none}.main{padding:3rem 0;min-height:calc(100vh - 130px)}.footer{background-color:var(--footer-background);padding:2rem 0;font-size:.9rem;color:var(--text-color)}.footer-content{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.social-links{display:flex;gap:1rem}.social-links a{color:var(--text-color);transition:color .2s}.social-links a:hover{color:var(--primary-color)}@media(max-width:768px){.menu-toggle{display:flex}.navbar{position:fixed;top:60px;left:0;right:0;background-color:var(--header-background);flex-direction:column;align-items:flex-start;padding:1rem;box-shadow:0 4px 6px rgba(0,0,0,.1);transform:translateY(-200%);transition:transform .3s ease}.navbar.active{transform:translateY(0)}.navbar a{padding:.5rem 0}.header-content{flex-wrap:wrap}}</style></head><body><header class=header><div class=header-container><div class=header-content><div class=logo><a href=https://mingyu110.github.io/tech-blog-/>技术博客</a></div><button class=menu-toggle aria-label="Toggle menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><nav class=navbar><a href=/tech-blog-/posts/>文章</a>
+<a href=/tech-blog-/tags/>标签</a>
+<a href=/tech-blog-/categories/>分类</a>
+<a href=/tech-blog-/about/>关于</a>
+<button class=theme-toggle aria-label="Toggle dark mode"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button></nav></div></div></header><main class=main><div class=main-container><article class=post><header class=post-header><h1 class=post-title>基于AWS Lambda的MCP智能客服系统：从零到生产的完整实践</h1><div class=post-meta><time datetime=2025-05-23T00:00:00Z>May 23, 2025</time><div class=post-categories><a href=/categories/%E4%BA%91%E6%9E%B6%E6%9E%84/ class=post-category>云架构</a>
+<a href=/categories/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD/ class=post-category>人工智能</a></div></div></header><div class=post-content><h1 id=基于aws-lambda的mcp智能客服系统从零到生产的完整实践>基于AWS Lambda的MCP智能客服系统：从零到生产的完整实践</h1><blockquote><p>本文将分享一个基于AWS Lambda和最新Model Context Protocol (MCP) v2025.03.26规范的智能客服系统实践，从技术选型到生产部署的完整过程。</p></blockquote><h2 id=项目概述>项目概述</h2><p><strong>AI_MCP</strong>是一个完整的智能客户支持聊天机器人系统，采用无服务器架构，实现了MCP v2025.03.26的Streamable HTTP Transport协议。项目GitHub地址：<a href=https://github.com/mingyu110/Cloud-Technical-Architect/tree/main/AI_MCP>https://github.com/mingyu110/Cloud-Technical-Architect/tree/main/AI_MCP</a></p><h3 id=核心特性>核心特性</h3><ul><li><strong>🚀 完全无服务器</strong>：基于AWS Lambda + API Gateway，按需付费</li><li><strong>🧠 多AI模型支持</strong>：集成Amazon Bedrock（Titan、Claude v2/v3）</li><li><strong>🔧 MCP标准实现</strong>：符合最新v2025.03.26规范的Streamable HTTP Transport</li><li><strong>📦 一键部署</strong>：完整的Terraform IaC + 自动化脚本工具链</li><li><strong>🛠️ 智能调试</strong>：交互式问题诊断和修复工具</li></ul><h2 id=技术架构>技术架构</h2><h3 id=系统架构图>系统架构图</h3><p><img src=/images/architecture.png alt=系统架构图></p><h3 id=核心技术栈>核心技术栈</h3><table><thead><tr><th>技术组件</th><th>选型</th><th>理由</th></tr></thead><tbody><tr><td><strong>计算平台</strong></td><td>AWS Lambda</td><td>完全托管、按需付费、自动伸缩</td></tr><tr><td><strong>API网关</strong></td><td>AWS API Gateway</td><td>原生集成、请求路由、访问控制</td></tr><tr><td><strong>AI服务</strong></td><td>AWS Bedrock</td><td>多模型支持、企业级安全、区域可用</td></tr><tr><td><strong>MCP实现</strong></td><td>FastAPI + Mangum</td><td>轻量级、高性能、Lambda适配</td></tr><tr><td><strong>IaC工具</strong></td><td>Terraform</td><td>声明式配置、版本控制、团队协作</td></tr><tr><td><strong>依赖管理</strong></td><td>Lambda Layer</td><td>共享依赖、减少包大小、版本隔离</td></tr></tbody></table><h2 id=model-context-protocol-mcp-深度解析>Model Context Protocol (MCP) 深度解析</h2><h3 id=mcp-v20250326的重要变化>MCP v2025.03.26的重要变化</h3><p>Anthropic在2025年3月发布的MCP v2025.03.26版本引入了<strong>Streamable HTTP Transport</strong>，这是一个重大的架构变化：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 传统的HTTP+SSE实现（已废弃）</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>MCPServerOld</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> __init__(self):
+</span></span><span style=display:flex><span>        self<span style=color:#f92672>.</span>transport <span style=color:#f92672>=</span> SSETransport()  <span style=color:#75715e># 需要持久连接</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span><span style=color:#75715e># 新的Streamable HTTP Transport实现</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>MCPServerNew</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> __init__(self):
+</span></span><span style=display:flex><span>        self<span style=color:#f92672>.</span>transport <span style=color:#f92672>=</span> HTTPTransport()  <span style=color:#75715e># 无状态HTTP请求</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>handle_request</span>(self, request: dict) <span style=color:#f92672>-&gt;</span> dict:
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;&#34;&#34;处理JSON-RPC 2.0请求&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> request[<span style=color:#e6db74>&#34;method&#34;</span>] <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;call_tool&#34;</span>:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> self<span style=color:#f92672>.</span>call_tool(request[<span style=color:#e6db74>&#34;params&#34;</span>])
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>elif</span> request[<span style=color:#e6db74>&#34;method&#34;</span>] <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;list_tools&#34;</span>:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> {<span style=color:#e6db74>&#34;tools&#34;</span>: self<span style=color:#f92672>.</span>available_tools}
+</span></span></code></pre></div><h3 id=在lambda中的实现优势>在Lambda中的实现优势</h3><ol><li><strong>无状态特性</strong>：完美匹配Lambda的执行模型</li><li><strong>冷启动优化</strong>：无需维持长连接，降低资源消耗</li><li><strong>成本效益</strong>：按实际请求付费，而非连接时间</li><li><strong>可伸缩性</strong>：自动处理并发请求，无连接池限制</li></ol><h2 id=核心实现详解>核心实现详解</h2><h3 id=1-mcp-server实现>1. MCP Server实现</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># src/lambda/mcp_server/mcp_server.py</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> fastapi <span style=color:#f92672>import</span> FastAPI, HTTPException
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> pydantic <span style=color:#f92672>import</span> BaseModel
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> json
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> logging
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> typing <span style=color:#f92672>import</span> Dict, Any
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> requests
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> mangum <span style=color:#f92672>import</span> Mangum
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>app <span style=color:#f92672>=</span> FastAPI()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>JSONRPCRequest</span>(BaseModel):
+</span></span><span style=display:flex><span>    jsonrpc: str <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;2.0&#34;</span>
+</span></span><span style=display:flex><span>    id: Any
+</span></span><span style=display:flex><span>    method: str
+</span></span><span style=display:flex><span>    params: Dict[str, Any] <span style=color:#f92672>=</span> {}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>JSONRPCResponse</span>(BaseModel):
+</span></span><span style=display:flex><span>    jsonrpc: str <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;2.0&#34;</span>
+</span></span><span style=display:flex><span>    id: Any
+</span></span><span style=display:flex><span>    result: Any <span style=color:#f92672>=</span> <span style=color:#66d9ef>None</span>
+</span></span><span style=display:flex><span>    error: Dict[str, Any] <span style=color:#f92672>=</span> <span style=color:#66d9ef>None</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># MCP工具定义</span>
+</span></span><span style=display:flex><span>AVAILABLE_TOOLS <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;get_order_status&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;查询订单状态信息&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;inputSchema&#34;</span>: {
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;type&#34;</span>: <span style=color:#e6db74>&#34;object&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;properties&#34;</span>: {
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;order_id&#34;</span>: {
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;type&#34;</span>: <span style=color:#e6db74>&#34;string&#34;</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;订单ID&#34;</span>
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            },
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>&#34;required&#34;</span>: [<span style=color:#e6db74>&#34;order_id&#34;</span>]
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>]
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>@app.post</span>(<span style=color:#e6db74>&#34;/mcp&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>mcp_endpoint</span>(request: JSONRPCRequest):
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;MCP JSON-RPC端点&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>try</span>:
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> request<span style=color:#f92672>.</span>method <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;list_tools&#34;</span>:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> JSONRPCResponse(
+</span></span><span style=display:flex><span>                id<span style=color:#f92672>=</span>request<span style=color:#f92672>.</span>id,
+</span></span><span style=display:flex><span>                result<span style=color:#f92672>=</span>{<span style=color:#e6db74>&#34;tools&#34;</span>: AVAILABLE_TOOLS}
+</span></span><span style=display:flex><span>            )
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>elif</span> request<span style=color:#f92672>.</span>method <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;call_tool&#34;</span>:
+</span></span><span style=display:flex><span>            tool_name <span style=color:#f92672>=</span> request<span style=color:#f92672>.</span>params<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;name&#34;</span>)
+</span></span><span style=display:flex><span>            tool_params <span style=color:#f92672>=</span> request<span style=color:#f92672>.</span>params<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;params&#34;</span>, {})
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> tool_name <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;get_order_status&#34;</span>:
+</span></span><span style=display:flex><span>                result <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> get_order_status(tool_params<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;order_id&#34;</span>))
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>return</span> JSONRPCResponse(id<span style=color:#f92672>=</span>request<span style=color:#f92672>.</span>id, result<span style=color:#f92672>=</span>result)
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>raise</span> HTTPException(status_code<span style=color:#f92672>=</span><span style=color:#ae81ff>400</span>, detail<span style=color:#f92672>=</span><span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;Unknown tool: </span><span style=color:#e6db74>{</span>tool_name<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>raise</span> HTTPException(status_code<span style=color:#f92672>=</span><span style=color:#ae81ff>400</span>, detail<span style=color:#f92672>=</span><span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;Unknown method: </span><span style=color:#e6db74>{</span>request<span style=color:#f92672>.</span>method<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>Exception</span> <span style=color:#66d9ef>as</span> e:
+</span></span><span style=display:flex><span>        logging<span style=color:#f92672>.</span>error(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;MCP处理错误: </span><span style=color:#e6db74>{</span>e<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> JSONRPCResponse(
+</span></span><span style=display:flex><span>            id<span style=color:#f92672>=</span>request<span style=color:#f92672>.</span>id,
+</span></span><span style=display:flex><span>            error<span style=color:#f92672>=</span>{<span style=color:#e6db74>&#34;code&#34;</span>: <span style=color:#f92672>-</span><span style=color:#ae81ff>32000</span>, <span style=color:#e6db74>&#34;message&#34;</span>: str(e)}
+</span></span><span style=display:flex><span>        )
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>get_order_status</span>(order_id: str) <span style=color:#f92672>-&gt;</span> str:
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;调用订单API获取状态&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>try</span>:
+</span></span><span style=display:flex><span>        mock_api_url <span style=color:#f92672>=</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{</span>os<span style=color:#f92672>.</span>environ[<span style=color:#e6db74>&#39;MOCK_API_URL&#39;</span>]<span style=color:#e6db74>}</span><span style=color:#e6db74>/orders/</span><span style=color:#e6db74>{</span>order_id<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        response <span style=color:#f92672>=</span> requests<span style=color:#f92672>.</span>get(mock_api_url, timeout<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span>)
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> response<span style=color:#f92672>.</span>status_code <span style=color:#f92672>==</span> <span style=color:#ae81ff>200</span>:
+</span></span><span style=display:flex><span>            data <span style=color:#f92672>=</span> response<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;订单 </span><span style=color:#e6db74>{</span>order_id<span style=color:#e6db74>}</span><span style=color:#e6db74> 的状态是: </span><span style=color:#e6db74>{</span>data[<span style=color:#e6db74>&#39;status&#39;</span>]<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;无法查询订单 </span><span style=color:#e6db74>{</span>order_id<span style=color:#e6db74>}</span><span style=color:#e6db74>，请检查订单号&#34;</span>
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>Exception</span> <span style=color:#66d9ef>as</span> e:
+</span></span><span style=display:flex><span>        logging<span style=color:#f92672>.</span>error(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;订单查询错误: </span><span style=color:#e6db74>{</span>e<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;查询订单时发生错误: </span><span style=color:#e6db74>{</span>str(e)<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Lambda适配器</span>
+</span></span><span style=display:flex><span>handler <span style=color:#f92672>=</span> Mangum(app)
+</span></span></code></pre></div><h3 id=2-ai聊天机器人集成>2. AI聊天机器人集成</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># src/lambda/mcp_client/mcp_client.py</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> boto3
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> json
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> re
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> requests
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> logging
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> typing <span style=color:#f92672>import</span> Optional, Dict, Any
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>MCPClient</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> __init__(self):
+</span></span><span style=display:flex><span>        self<span style=color:#f92672>.</span>bedrock <span style=color:#f92672>=</span> boto3<span style=color:#f92672>.</span>client(<span style=color:#e6db74>&#39;bedrock-runtime&#39;</span>)
+</span></span><span style=display:flex><span>        self<span style=color:#f92672>.</span>mcp_server_url <span style=color:#f92672>=</span> os<span style=color:#f92672>.</span>environ[<span style=color:#e6db74>&#39;MCP_SERVER_URL&#39;</span>]
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>chat</span>(self, user_query: str) <span style=color:#f92672>-&gt;</span> str:
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;&#34;&#34;处理用户查询，集成MCP工具调用&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># 1. 提取订单ID</span>
+</span></span><span style=display:flex><span>        order_id <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>extract_order_id(user_query)
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> order_id:
+</span></span><span style=display:flex><span>            <span style=color:#75715e># 2. 调用MCP服务器获取订单信息</span>
+</span></span><span style=display:flex><span>            order_info <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> self<span style=color:#f92672>.</span>call_mcp_tool(<span style=color:#e6db74>&#34;get_order_status&#34;</span>, {<span style=color:#e6db74>&#34;order_id&#34;</span>: order_id})
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#75715e># 3. 使用AI生成智能回复</span>
+</span></span><span style=display:flex><span>            context <span style=color:#f92672>=</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;用户查询: </span><span style=color:#e6db74>{</span>user_query<span style=color:#e6db74>}</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>订单信息: </span><span style=color:#e6db74>{</span>order_info<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> self<span style=color:#f92672>.</span>generate_ai_response(context)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>            <span style=color:#75715e># 4. 直接AI回复</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>await</span> self<span style=color:#f92672>.</span>generate_ai_response(user_query)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>extract_order_id</span>(self, text: str) <span style=color:#f92672>-&gt;</span> Optional[str]:
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;&#34;&#34;从文本中提取订单ID&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>        patterns <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>r</span><span style=color:#e6db74>&#39;订单\s*[号]?\s*[：:]\s*([A-Za-z0-9]+)&#39;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>r</span><span style=color:#e6db74>&#39;订单\s*([A-Za-z0-9]+)&#39;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#e6db74>r</span><span style=color:#e6db74>&#39;[号]?\s*([A-Za-z0-9]{5,})&#39;</span>
+</span></span><span style=display:flex><span>        ]
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> pattern <span style=color:#f92672>in</span> patterns:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>match</span> <span style=color:#f92672>=</span> re<span style=color:#f92672>.</span>search(pattern, text)
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#66d9ef>match</span>:
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>match</span><span style=color:#f92672>.</span>group(<span style=color:#ae81ff>1</span>)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>None</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>call_mcp_tool</span>(self, tool_name: str, params: Dict[str, Any]) <span style=color:#f92672>-&gt;</span> str:
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;&#34;&#34;调用MCP工具&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>try</span>:
+</span></span><span style=display:flex><span>            payload <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;jsonrpc&#34;</span>: <span style=color:#e6db74>&#34;2.0&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;id&#34;</span>: <span style=color:#e6db74>&#34;mcp-call-1&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;method&#34;</span>: <span style=color:#e6db74>&#34;call_tool&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;params&#34;</span>: {
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;name&#34;</span>: tool_name,
+</span></span><span style=display:flex><span>                    <span style=color:#e6db74>&#34;params&#34;</span>: params
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            response <span style=color:#f92672>=</span> requests<span style=color:#f92672>.</span>post(
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{</span>self<span style=color:#f92672>.</span>mcp_server_url<span style=color:#e6db74>}</span><span style=color:#e6db74>/mcp&#34;</span>,
+</span></span><span style=display:flex><span>                json<span style=color:#f92672>=</span>payload,
+</span></span><span style=display:flex><span>                headers<span style=color:#f92672>=</span>{<span style=color:#e6db74>&#34;Content-Type&#34;</span>: <span style=color:#e6db74>&#34;application/json&#34;</span>},
+</span></span><span style=display:flex><span>                timeout<span style=color:#f92672>=</span><span style=color:#ae81ff>30</span>
+</span></span><span style=display:flex><span>            )
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> response<span style=color:#f92672>.</span>status_code <span style=color:#f92672>==</span> <span style=color:#ae81ff>200</span>:
+</span></span><span style=display:flex><span>                result <span style=color:#f92672>=</span> response<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>return</span> result<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#34;result&#34;</span>, <span style=color:#e6db74>&#34;工具调用成功，但无返回结果&#34;</span>)
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>return</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;工具调用失败: HTTP </span><span style=color:#e6db74>{</span>response<span style=color:#f92672>.</span>status_code<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>                
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>Exception</span> <span style=color:#66d9ef>as</span> e:
+</span></span><span style=display:flex><span>            logging<span style=color:#f92672>.</span>error(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;MCP工具调用错误: </span><span style=color:#e6db74>{</span>e<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;工具调用时发生错误: </span><span style=color:#e6db74>{</span>str(e)<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>generate_ai_response</span>(self, prompt: str) <span style=color:#f92672>-&gt;</span> str:
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;&#34;&#34;使用Bedrock生成AI回复&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>try</span>:
+</span></span><span style=display:flex><span>            <span style=color:#75715e># 支持多个AI模型</span>
+</span></span><span style=display:flex><span>            models <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;amazon.titan-text-premier-v1:0&#34;</span>,
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;anthropic.claude-v2:1&#34;</span>, 
+</span></span><span style=display:flex><span>                <span style=color:#e6db74>&#34;anthropic.claude-3-sonnet-20240229-v1:0&#34;</span>
+</span></span><span style=display:flex><span>            ]
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>for</span> model_id <span style=color:#f92672>in</span> models:
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>try</span>:
+</span></span><span style=display:flex><span>                    body <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>                        <span style=color:#e6db74>&#34;inputText&#34;</span>: <span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;请用友好、专业的语气回复客户：</span><span style=color:#e6db74>{</span>prompt<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>,
+</span></span><span style=display:flex><span>                        <span style=color:#e6db74>&#34;textGenerationConfig&#34;</span>: {
+</span></span><span style=display:flex><span>                            <span style=color:#e6db74>&#34;maxTokenCount&#34;</span>: <span style=color:#ae81ff>500</span>,
+</span></span><span style=display:flex><span>                            <span style=color:#e6db74>&#34;temperature&#34;</span>: <span style=color:#ae81ff>0.7</span>,
+</span></span><span style=display:flex><span>                            <span style=color:#e6db74>&#34;topP&#34;</span>: <span style=color:#ae81ff>0.9</span>
+</span></span><span style=display:flex><span>                        }
+</span></span><span style=display:flex><span>                    }
+</span></span><span style=display:flex><span>                    
+</span></span><span style=display:flex><span>                    response <span style=color:#f92672>=</span> self<span style=color:#f92672>.</span>bedrock<span style=color:#f92672>.</span>invoke_model(
+</span></span><span style=display:flex><span>                        modelId<span style=color:#f92672>=</span>model_id,
+</span></span><span style=display:flex><span>                        body<span style=color:#f92672>=</span>json<span style=color:#f92672>.</span>dumps(body)
+</span></span><span style=display:flex><span>                    )
+</span></span><span style=display:flex><span>                    
+</span></span><span style=display:flex><span>                    result <span style=color:#f92672>=</span> json<span style=color:#f92672>.</span>loads(response[<span style=color:#e6db74>&#39;body&#39;</span>]<span style=color:#f92672>.</span>read())
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>return</span> result[<span style=color:#e6db74>&#39;results&#39;</span>][<span style=color:#ae81ff>0</span>][<span style=color:#e6db74>&#39;outputText&#39;</span>]<span style=color:#f92672>.</span>strip()
+</span></span><span style=display:flex><span>                    
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>Exception</span> <span style=color:#66d9ef>as</span> model_error:
+</span></span><span style=display:flex><span>                    logging<span style=color:#f92672>.</span>warning(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;模型 </span><span style=color:#e6db74>{</span>model_id<span style=color:#e6db74>}</span><span style=color:#e6db74> 调用失败: </span><span style=color:#e6db74>{</span>model_error<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>continue</span>
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#e6db74>&#34;抱歉，AI服务暂时不可用，请稍后重试。&#34;</span>
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>except</span> <span style=color:#a6e22e>Exception</span> <span style=color:#66d9ef>as</span> e:
+</span></span><span style=display:flex><span>            logging<span style=color:#f92672>.</span>error(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;AI生成错误: </span><span style=color:#e6db74>{</span>e<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>return</span> <span style=color:#e6db74>&#34;抱歉，处理您的请求时遇到了问题，请稍后重试。&#34;</span>
+</span></span></code></pre></div><h2 id=基础设施即代码-terraform>基础设施即代码 (Terraform)</h2><h3 id=模块化架构设计>模块化架构设计</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-hcl data-lang=hcl><span style=display:flex><span><span style=color:#75715e># infrastructure/terraform/main.tf
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>terraform</span> {
+</span></span><span style=display:flex><span>  required_version <span style=color:#f92672>=</span> &#34;&gt;<span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>.<span style=color:#ae81ff>0</span><span style=color:#960050;background-color:#1e0010>&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>required_providers</span> {
+</span></span><span style=display:flex><span>    aws <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      source  <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;hashicorp/aws&#34;</span>
+</span></span><span style=display:flex><span>      version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;~&gt; 5.0&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>provider</span> <span style=color:#e6db74>&#34;aws&#34;</span> {
+</span></span><span style=display:flex><span>  region <span style=color:#f92672>=</span> <span style=color:#66d9ef>var</span>.<span style=color:#66d9ef>aws_region</span>
+</span></span><span style=display:flex><span>}<span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e># Lambda Layer for dependencies
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>resource</span> <span style=color:#e6db74>&#34;aws_lambda_layer_version&#34; &#34;mcp_dependencies&#34;</span> {
+</span></span><span style=display:flex><span>  filename         <span style=color:#f92672>=</span> <span style=color:#66d9ef>var</span>.<span style=color:#66d9ef>layer_zip_path</span>
+</span></span><span style=display:flex><span>  layer_name       <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;mcp-dependencies&#34;</span>
+</span></span><span style=display:flex><span>  source_code_hash <span style=color:#f92672>=</span> <span style=color:#66d9ef>filebase64sha256</span>(<span style=color:#66d9ef>var</span>.<span style=color:#66d9ef>layer_zip_path</span>)
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  compatible_runtimes <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;python3.11&#34;</span>]
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>lifecycle</span> {
+</span></span><span style=display:flex><span>    create_before_destroy <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}<span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e># Lambda函数模块
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>module</span> <span style=color:#e6db74>&#34;lambda_functions&#34;</span> {
+</span></span><span style=display:flex><span>  source <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;../modules/lambda&#34;</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  layer_arn    <span style=color:#f92672>=</span> <span style=color:#66d9ef>aws_lambda_layer_version</span>.<span style=color:#66d9ef>mcp_dependencies</span>.<span style=color:#66d9ef>arn</span>
+</span></span><span style=display:flex><span>  environment_variables <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    MOCK_API_URL <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>api_gateway</span>.<span style=color:#66d9ef>mock_api_url</span>
+</span></span><span style=display:flex><span>    MCP_SERVER_URL <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>api_gateway</span>.<span style=color:#66d9ef>mcp_server_url</span>
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}<span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e># API Gateway模块
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>module</span> <span style=color:#e6db74>&#34;api_gateway&#34;</span> {
+</span></span><span style=display:flex><span>  source <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;../modules/api_gateway&#34;</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  mcp_client_function_name <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>lambda_functions</span>.<span style=color:#66d9ef>mcp_client_function_name</span>
+</span></span><span style=display:flex><span>  mcp_server_function_name <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>lambda_functions</span>.<span style=color:#66d9ef>mcp_server_function_name</span>
+</span></span><span style=display:flex><span>  mock_api_function_name   <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>lambda_functions</span>.<span style=color:#66d9ef>mock_api_function_name</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  mcp_client_invoke_arn <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>lambda_functions</span>.<span style=color:#66d9ef>mcp_client_invoke_arn</span>
+</span></span><span style=display:flex><span>  mcp_server_invoke_arn <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>lambda_functions</span>.<span style=color:#66d9ef>mcp_server_invoke_arn</span>
+</span></span><span style=display:flex><span>  mock_api_invoke_arn   <span style=color:#f92672>=</span> <span style=color:#66d9ef>module</span>.<span style=color:#66d9ef>lambda_functions</span>.<span style=color:#66d9ef>mock_api_invoke_arn</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=lambda模块配置>Lambda模块配置</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-hcl data-lang=hcl><span style=display:flex><span><span style=color:#75715e># infrastructure/modules/lambda/main.tf
+</span></span></span><span style=display:flex><span><span style=color:#75715e># MCP Client (Chatbot API)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>resource</span> <span style=color:#e6db74>&#34;aws_lambda_function&#34; &#34;mcp_client&#34;</span> {
+</span></span><span style=display:flex><span>  filename         <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;${path.module}/../../../mcp_client.zip&#34;</span>
+</span></span><span style=display:flex><span>  function_name    <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;mcp-client&#34;</span>
+</span></span><span style=display:flex><span>  role            <span style=color:#f92672>=</span> <span style=color:#66d9ef>aws_iam_role</span>.<span style=color:#66d9ef>lambda_role</span>.<span style=color:#66d9ef>arn</span>
+</span></span><span style=display:flex><span>  handler         <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;mcp_client.handler&#34;</span>
+</span></span><span style=display:flex><span>  source_code_hash <span style=color:#f92672>=</span> <span style=color:#66d9ef>filebase64sha256</span>(<span style=color:#e6db74>&#34;${path.module}/../../../mcp_client.zip&#34;</span>)
+</span></span><span style=display:flex><span>  runtime         <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;python3.11&#34;</span>
+</span></span><span style=display:flex><span>  timeout         <span style=color:#f92672>=</span> <span style=color:#ae81ff>30</span>
+</span></span><span style=display:flex><span>  memory_size     <span style=color:#f92672>=</span> <span style=color:#ae81ff>1024</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  layers <span style=color:#f92672>=</span> [<span style=color:#66d9ef>var</span>.<span style=color:#66d9ef>layer_arn</span>]
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>environment</span> {
+</span></span><span style=display:flex><span>    variables <span style=color:#f92672>=</span> <span style=color:#66d9ef>var</span>.<span style=color:#66d9ef>environment_variables</span>
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  depends_on <span style=color:#f92672>=</span> [<span style=color:#66d9ef>aws_iam_role_policy_attachment</span>.<span style=color:#66d9ef>lambda_policy</span>]
+</span></span><span style=display:flex><span>}<span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e># Bedrock权限策略
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>resource</span> <span style=color:#e6db74>&#34;aws_iam_role_policy&#34; &#34;bedrock_policy&#34;</span> {
+</span></span><span style=display:flex><span>  name <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;bedrock-access-policy&#34;</span>
+</span></span><span style=display:flex><span>  role <span style=color:#f92672>=</span> <span style=color:#66d9ef>aws_iam_role</span>.<span style=color:#66d9ef>lambda_role</span>.<span style=color:#66d9ef>id</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  policy <span style=color:#f92672>=</span> <span style=color:#66d9ef>file</span>(<span style=color:#e6db74>&#34;${path.module}/bedrock_policy.json&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=核心问题解决实践>核心问题解决实践</h2><h3 id=1-平台兼容性问题>1. 平台兼容性问题</h3><p><strong>问题描述</strong>：在macOS ARM64环境构建的Python包在Lambda Linux x86_64环境中无法运行。</p><p><strong>错误现象</strong>：</p><pre tabindex=0><code>[ERROR] Runtime.ImportModuleError: Unable to import module &#39;mcp_server&#39;: 
+No module named &#39;_pydantic_core&#39;
+</code></pre><p><strong>解决方案</strong>：使用平台特定的pip安装</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># scripts/prepare_py311_layer.sh</span>
+</span></span><span style=display:flex><span>echo <span style=color:#e6db74>&#34;🔧 安装Linux x86_64特定依赖...&#34;</span>
+</span></span><span style=display:flex><span>python3 -m pip install -r requirements.txt <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    -t layer_build/python/ <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    --platform manylinux2014_x86_64 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    --python-version 3.11 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    --only-binary<span style=color:#f92672>=</span>:all: <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    --upgrade
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 验证pydantic_core兼容性</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> find layer_build/python -name <span style=color:#e6db74>&#34;*pydantic_core*&#34;</span> -type f | head -1 | xargs file | grep -q <span style=color:#e6db74>&#34;x86-64&#34;</span>; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;✅ pydantic_core平台检查通过&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;❌ pydantic_core平台不兼容，请检查构建过程&#34;</span>
+</span></span><span style=display:flex><span>    exit <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>fi</span>
+</span></span></code></pre></div><h3 id=2-shell配置冲突>2. Shell配置冲突</h3><p><strong>问题描述</strong>：AWS CLI在某些shell配置下出现分页器错误。</p><p><strong>错误现象</strong>：</p><pre tabindex=0><code>head: |: No such file or directory
+</code></pre><p><strong>解决方案</strong>：在所有脚本中禁用AWS分页器</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 在脚本开头设置</span>
+</span></span><span style=display:flex><span>export AWS_PAGER<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>
+</span></span></code></pre></div><h3 id=3-unicode编码问题>3. Unicode编码问题</h3><p><strong>问题描述</strong>：中文响应被编码为Unicode转义序列。</p><p><strong>错误现象</strong>：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{<span style=color:#f92672>&#34;message&#34;</span>: <span style=color:#e6db74>&#34;\u5f88\u62b1\u6b49&#34;</span>}  <span style=color:#75715e>// 应该是 &#34;很抱歉&#34;
+</span></span></span></code></pre></div><p><strong>解决方案</strong>：在JSON序列化时禁用ASCII转义</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>return</span> {
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#39;statusCode&#39;</span>: <span style=color:#ae81ff>200</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#39;headers&#39;</span>: {
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#39;Content-Type&#39;</span>: <span style=color:#e6db74>&#39;application/json; charset=utf-8&#39;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#39;Access-Control-Allow-Origin&#39;</span>: <span style=color:#e6db74>&#39;*&#39;</span>
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#39;body&#39;</span>: json<span style=color:#f92672>.</span>dumps(body, ensure_ascii<span style=color:#f92672>=</span><span style=color:#66d9ef>False</span>, indent<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=自动化运维工具链>自动化运维工具链</h2><h3 id=1-一键部署脚本>1. 一键部署脚本</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e>#!/bin/bash
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#75715e># scripts/prepare_py311_layer.sh</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>set -e  <span style=color:#75715e># 遇到错误立即退出</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 颜色定义</span>
+</span></span><span style=display:flex><span>RED<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;\033[0;31m&#39;</span>
+</span></span><span style=display:flex><span>GREEN<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;\033[0;32m&#39;</span>
+</span></span><span style=display:flex><span>YELLOW<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;\033[1;33m&#39;</span>
+</span></span><span style=display:flex><span>BLUE<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;\033[0;34m&#39;</span>
+</span></span><span style=display:flex><span>NC<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;\033[0m&#39;</span> <span style=color:#75715e># No Color</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>🚀 AI_MCP项目 - Python 3.11 Layer自动化构建和部署</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 环境检查</span>
+</span></span><span style=display:flex><span>check_dependencies<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>📋 检查依赖...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> ! command -v python3 &amp;&gt; /dev/null; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ 未找到python3</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        exit <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> ! command -v aws &amp;&gt; /dev/null; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ 未找到aws cli</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        exit <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 检查AWS凭证</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> ! aws sts get-caller-identity &amp;&gt; /dev/null; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ AWS凭证未配置</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        exit <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ 环境检查通过</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 构建Layer</span>
+</span></span><span style=display:flex><span>build_layer<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>🏗️ 构建Python Layer...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 清理旧构建</span>
+</span></span><span style=display:flex><span>    rm -rf layer_build/ py311_layer*.zip
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 创建构建目录</span>
+</span></span><span style=display:flex><span>    mkdir -p layer_build/python
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 安装Linux x86_64特定依赖</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>YELLOW<span style=color:#e6db74>}</span><span style=color:#e6db74>📦 安装Linux x86_64特定依赖...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    python3 -m pip install -r requirements.txt <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        -t layer_build/python/ <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --platform manylinux2014_x86_64 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --python-version 3.11 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --only-binary<span style=color:#f92672>=</span>:all: <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --upgrade
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 验证关键依赖</span>
+</span></span><span style=display:flex><span>    validate_dependencies
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 打包Layer</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>YELLOW<span style=color:#e6db74>}</span><span style=color:#e6db74>📦 打包Layer...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    cd layer_build
+</span></span><span style=display:flex><span>    zip -r ../py311_layer_linux.zip python/
+</span></span><span style=display:flex><span>    cd ..
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ Layer构建完成: py311_layer_linux.zip</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 部署到AWS</span>
+</span></span><span style=display:flex><span>deploy_layer<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>☁️ 部署Layer到AWS...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    LAYER_VERSION<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>aws lambda publish-layer-version <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --layer-name mcp-dependencies <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --zip-file fileb://py311_layer_linux.zip <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --compatible-runtimes python3.11 <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --query <span style=color:#e6db74>&#39;Version&#39;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --output text<span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ Layer部署成功，版本: </span><span style=color:#e6db74>${</span>LAYER_VERSION<span style=color:#e6db74>}${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 更新Lambda函数使用新Layer</span>
+</span></span><span style=display:flex><span>    update_lambda_functions <span style=color:#e6db74>&#34;</span>$LAYER_VERSION<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 主函数</span>
+</span></span><span style=display:flex><span>main<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    export AWS_PAGER<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>  <span style=color:#75715e># 避免shell冲突</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    check_dependencies
+</span></span><span style=display:flex><span>    build_layer
+</span></span><span style=display:flex><span>    deploy_layer
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>🎉 部署完成！</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>📊 Layer信息:</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    aws lambda get-layer-version <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --layer-name mcp-dependencies <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --version-number <span style=color:#e6db74>&#34;</span>$LAYER_VERSION<span style=color:#e6db74>&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --query <span style=color:#e6db74>&#39;{LayerArn:LayerArn,Version:Version,CreatedDate:CreatedDate}&#39;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>        --output table
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>main <span style=color:#e6db74>&#34;</span>$@<span style=color:#e6db74>&#34;</span>
+</span></span></code></pre></div><h3 id=2-端到端测试套件>2. 端到端测试套件</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e>#!/bin/bash
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#75715e># scripts/test_all_apis.sh</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 颜色定义和初始化</span>
+</span></span><span style=display:flex><span>source <span style=color:#e6db74>&#34;</span><span style=color:#66d9ef>$(</span>dirname <span style=color:#e6db74>&#34;</span>$0<span style=color:#e6db74>&#34;</span><span style=color:#66d9ef>)</span><span style=color:#e6db74>/common.sh&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 测试计数器</span>
+</span></span><span style=display:flex><span>TOTAL_TESTS<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>PASSED_TESTS<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 测试函数</span>
+</span></span><span style=display:flex><span>test_api<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    local test_name<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span>$1<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    local url<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span>$2<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    local method<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span>$3<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    local data<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span>$4<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    local expected_status<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;</span>$5<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    TOTAL_TESTS<span style=color:#f92672>=</span><span style=color:#66d9ef>$((</span>TOTAL_TESTS <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span><span style=color:#66d9ef>))</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>=== 测试</span><span style=color:#e6db74>${</span>TOTAL_TESTS<span style=color:#e6db74>}</span><span style=color:#e6db74>: </span><span style=color:#e6db74>${</span>test_name<span style=color:#e6db74>}</span><span style=color:#e6db74> ===</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#f92672>[</span> <span style=color:#e6db74>&#34;</span>$method<span style=color:#e6db74>&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;POST&#34;</span> <span style=color:#f92672>]</span>; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        response<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>curl -s -w <span style=color:#e6db74>&#34;\n%{http_code}&#34;</span> -X POST <span style=color:#e6db74>&#34;</span>$url<span style=color:#e6db74>&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>            -H <span style=color:#e6db74>&#34;Content-Type: application/json&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>            -d <span style=color:#e6db74>&#34;</span>$data<span style=color:#e6db74>&#34;</span><span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>        response<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>curl -s -w <span style=color:#e6db74>&#34;\n%{http_code}&#34;</span> <span style=color:#e6db74>&#34;</span>$url<span style=color:#e6db74>&#34;</span><span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 分离响应体和状态码</span>
+</span></span><span style=display:flex><span>    body<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>echo <span style=color:#e6db74>&#34;</span>$response<span style=color:#e6db74>&#34;</span> | head -n -1<span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    status<span style=color:#f92672>=</span><span style=color:#66d9ef>$(</span>echo <span style=color:#e6db74>&#34;</span>$response<span style=color:#e6db74>&#34;</span> | tail -n 1<span style=color:#66d9ef>)</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 验证状态码</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#f92672>[</span> <span style=color:#e6db74>&#34;</span>$status<span style=color:#e6db74>&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;</span>$expected_status<span style=color:#e6db74>&#34;</span> <span style=color:#f92672>]</span>; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ HTTP状态码正确 (</span>$status<span style=color:#e6db74>)</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ HTTP状态码错误 (期望: </span>$expected_status<span style=color:#e6db74>, 实际: </span>$status<span style=color:#e6db74>)</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 验证JSON格式</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> echo <span style=color:#e6db74>&#34;</span>$body<span style=color:#e6db74>&#34;</span> | jq . &gt;/dev/null 2&gt;&amp;1; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ 响应为有效JSON格式</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>YELLOW<span style=color:#e6db74>}</span><span style=color:#e6db74>📄 响应内容:</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        echo <span style=color:#e6db74>&#34;</span>$body<span style=color:#e6db74>&#34;</span> | jq .
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ 响应不是有效JSON格式</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>YELLOW<span style=color:#e6db74>}</span><span style=color:#e6db74>📄 原始响应:</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        echo <span style=color:#e6db74>&#34;</span>$body<span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    PASSED_TESTS<span style=color:#f92672>=</span><span style=color:#66d9ef>$((</span>PASSED_TESTS <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span><span style=color:#66d9ef>))</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ 测试通过</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 主测试流程</span>
+</span></span><span style=display:flex><span>main<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>🧪 AI_MCP项目 - 全面API测试</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 获取API端点</span>
+</span></span><span style=display:flex><span>    get_api_endpoints
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 执行测试</span>
+</span></span><span style=display:flex><span>    test_mock_api
+</span></span><span style=display:flex><span>    test_mcp_server
+</span></span><span style=display:flex><span>    test_chatbot_api
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 输出测试结果</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>=== 测试结果摘要 ===</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;总测试数: </span><span style=color:#e6db74>${</span>TOTAL_TESTS<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;通过测试: </span><span style=color:#e6db74>${</span>PASSED_TESTS<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;成功率: </span><span style=color:#66d9ef>$((</span>PASSED_TESTS <span style=color:#f92672>*</span> <span style=color:#ae81ff>100</span> <span style=color:#f92672>/</span> TOTAL_TESTS<span style=color:#66d9ef>))</span><span style=color:#e6db74>%&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#f92672>[</span> <span style=color:#e6db74>&#34;</span>$PASSED_TESTS<span style=color:#e6db74>&#34;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;</span>$TOTAL_TESTS<span style=color:#e6db74>&#34;</span> <span style=color:#f92672>]</span>; <span style=color:#66d9ef>then</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>🎉 所有测试通过！系统运行正常</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        exit <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ 部分测试失败，请检查系统状态</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        exit <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fi</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>main <span style=color:#e6db74>&#34;</span>$@<span style=color:#e6db74>&#34;</span>
+</span></span></code></pre></div><h3 id=3-交互式调试工具>3. 交互式调试工具</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e>#!/bin/bash
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#75715e># scripts/debug_lambda.sh</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>show_menu<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>🔧 AI_MCP Lambda调试工具</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;请选择调试选项:&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;1. 检查Lambda函数配置&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;2. 查看实时日志&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;3. 搜索错误日志&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;4. 检查Layer兼容性&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;5. 检测导入错误&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;6. 自动修复常见问题&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;7. 测试Bedrock权限&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;8. 同步Terraform状态&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;9. 完整系统诊断&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;0. 退出&#34;</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>    echo -n <span style=color:#e6db74>&#34;请输入选项 (0-9): &#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 完整系统诊断</span>
+</span></span><span style=display:flex><span>full_diagnosis<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>🔍 开始完整系统诊断...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 检查AWS连接</span>
+</span></span><span style=display:flex><span>    check_aws_connectivity
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 检查函数状态</span>
+</span></span><span style=display:flex><span>    check_lambda_functions
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 检查Layer兼容性</span>
+</span></span><span style=display:flex><span>    check_layer_compatibility
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 检查权限配置</span>
+</span></span><span style=display:flex><span>    check_bedrock_permissions
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 检查API Gateway</span>
+</span></span><span style=display:flex><span>    check_api_gateway
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 运行快速测试</span>
+</span></span><span style=display:flex><span>    run_quick_tests
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>GREEN<span style=color:#e6db74>}</span><span style=color:#e6db74>✅ 诊断完成</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>main<span style=color:#f92672>()</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    export AWS_PAGER<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>while</span> true; <span style=color:#66d9ef>do</span>
+</span></span><span style=display:flex><span>        show_menu
+</span></span><span style=display:flex><span>        read -r choice
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>case</span> $choice in
+</span></span><span style=display:flex><span>            1<span style=color:#f92672>)</span> check_lambda_config ;;
+</span></span><span style=display:flex><span>            2<span style=color:#f92672>)</span> view_realtime_logs ;;
+</span></span><span style=display:flex><span>            3<span style=color:#f92672>)</span> search_error_logs ;;
+</span></span><span style=display:flex><span>            4<span style=color:#f92672>)</span> check_layer_compatibility ;;
+</span></span><span style=display:flex><span>            5<span style=color:#f92672>)</span> detect_import_errors ;;
+</span></span><span style=display:flex><span>            6<span style=color:#f92672>)</span> auto_fix_issues ;;
+</span></span><span style=display:flex><span>            7<span style=color:#f92672>)</span> test_bedrock_permissions ;;
+</span></span><span style=display:flex><span>            8<span style=color:#f92672>)</span> sync_terraform_state ;;
+</span></span><span style=display:flex><span>            9<span style=color:#f92672>)</span> full_diagnosis ;;
+</span></span><span style=display:flex><span>            0<span style=color:#f92672>)</span> echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>BLUE<span style=color:#e6db74>}</span><span style=color:#e6db74>👋 再见！</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>; exit <span style=color:#ae81ff>0</span> ;;
+</span></span><span style=display:flex><span>            *<span style=color:#f92672>)</span> echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>RED<span style=color:#e6db74>}</span><span style=color:#e6db74>❌ 无效选项，请重新选择</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span> ;;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>esac</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        echo <span style=color:#e6db74>&#34;&#34;</span>
+</span></span><span style=display:flex><span>        echo -e <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>YELLOW<span style=color:#e6db74>}</span><span style=color:#e6db74>按回车键继续...</span><span style=color:#e6db74>${</span>NC<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>        read -r
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>done</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>main <span style=color:#e6db74>&#34;</span>$@<span style=color:#e6db74>&#34;</span>
+</span></span></code></pre></div><h2 id=性能优化和最佳实践>性能优化和最佳实践</h2><h3 id=1-冷启动优化>1. 冷启动优化</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># 全局初始化，避免每次请求重复创建</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> boto3
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> os
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 模块级别初始化</span>
+</span></span><span style=display:flex><span>BEDROCK_CLIENT <span style=color:#f92672>=</span> boto3<span style=color:#f92672>.</span>client(<span style=color:#e6db74>&#39;bedrock-runtime&#39;</span>)
+</span></span><span style=display:flex><span>MCP_SERVER_URL <span style=color:#f92672>=</span> os<span style=color:#f92672>.</span>environ<span style=color:#f92672>.</span>get(<span style=color:#e6db74>&#39;MCP_SERVER_URL&#39;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>handler</span>(event, context):
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;&#34;&#34;优化的Lambda处理器&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># 复用全局客户端</span>
+</span></span><span style=display:flex><span>    client <span style=color:#f92672>=</span> MCPClient(bedrock_client<span style=color:#f92672>=</span>BEDROCK_CLIENT)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> client<span style=color:#f92672>.</span>handle_request(event)
+</span></span></code></pre></div><h3 id=2-内存和超时配置>2. 内存和超时配置</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-hcl data-lang=hcl><span style=display:flex><span><span style=color:#75715e># Terraform配置优化
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>resource</span> <span style=color:#e6db74>&#34;aws_lambda_function&#34; &#34;mcp_client&#34;</span> {
+</span></span><span style=display:flex><span>  memory_size <span style=color:#f92672>=</span> <span style=color:#ae81ff>1024</span><span style=color:#75715e>  # AI处理需要足够内存
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>  timeout     <span style=color:#f92672>=</span> <span style=color:#ae81ff>30</span><span style=color:#75715e>    # MCP调用链可能较长
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>  
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>environment</span> {
+</span></span><span style=display:flex><span>    variables <span style=color:#f92672>=</span> {<span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e>      # 启用X-Ray追踪
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>      _X_AMZN_TRACE_ID <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;auto&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=3-监控和告警>3. 监控和告警</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-hcl data-lang=hcl><span style=display:flex><span><span style=color:#75715e># CloudWatch告警
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>resource</span> <span style=color:#e6db74>&#34;aws_cloudwatch_metric_alarm&#34; &#34;lambda_errors&#34;</span> {
+</span></span><span style=display:flex><span>  alarm_name          <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;mcp-lambda-errors&#34;</span>
+</span></span><span style=display:flex><span>  comparison_operator <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;GreaterThanThreshold&#34;</span>
+</span></span><span style=display:flex><span>  evaluation_periods  <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;2&#34;</span>
+</span></span><span style=display:flex><span>  metric_name         <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Errors&#34;</span>
+</span></span><span style=display:flex><span>  namespace           <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;AWS/Lambda&#34;</span>
+</span></span><span style=display:flex><span>  period              <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;300&#34;</span>
+</span></span><span style=display:flex><span>  statistic           <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Sum&#34;</span>
+</span></span><span style=display:flex><span>  threshold           <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;5&#34;</span>
+</span></span><span style=display:flex><span>  alarm_description   <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Lambda function error rate too high&#34;</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  dimensions <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    FunctionName <span style=color:#f92672>=</span> <span style=color:#66d9ef>aws_lambda_function</span>.<span style=color:#66d9ef>mcp_client</span>.<span style=color:#66d9ef>function_name</span>
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=应用场景和扩展方向>应用场景和扩展方向</h2><h3 id=适用场景>适用场景</h3><ol><li><strong>智能客服系统</strong>：自动处理订单查询、退换货咨询</li><li><strong>企业内部助手</strong>：集成OA系统、知识库查询</li><li><strong>电商平台助手</strong>：商品推荐、库存查询、物流追踪</li><li><strong>金融服务机器人</strong>：账户查询、交易记录、风险评估</li></ol><h3 id=扩展方向>扩展方向</h3><ol><li><strong>多工具集成</strong>：添加更多MCP工具（天气、汇率、新闻等）</li><li><strong>多模态支持</strong>：图像识别、语音交互</li><li><strong>个性化定制</strong>：用户画像、对话历史</li><li><strong>实时流式响应</strong>：WebSocket支持、流式AI生成</li></ol><h2 id=测试结果>测试结果</h2><p>通过完整的API测试流程，系统各组件运行状态良好，所有测试均通过验证：</p><p><img src=/images/result.jpg alt=测试结果></p><h2 id=总结与展望>总结与展望</h2><p>本项目展示了如何在AWS无服务器架构上实现现代化的AI客服系统，主要收获包括：</p><h3 id=技术收获>技术收获</h3><ol><li><strong>MCP协议的深度应用</strong>：实践了最新的v2025.03.26规范</li><li><strong>无服务器架构的优势</strong>：成本可控、自动伸缩、运维简化</li><li><strong>基础设施即代码</strong>：Terraform模块化设计、版本控制</li><li><strong>自动化运维</strong>：完整的CI/CD工具链、问题诊断</li></ol><h3 id=最佳实践>最佳实践</h3><ol><li><strong>平台兼容性</strong>：始终使用目标平台特定的构建方式</li><li><strong>错误处理</strong>：完善的异常捕获和用户友好的错误信息</li><li><strong>可观测性</strong>：结构化日志、性能监控、告警机制</li><li><strong>安全考虑</strong>：最小权限原则、敏感信息保护</li></ol><h3 id=未来展望>未来展望</h3><p>随着AI技术的快速发展，MCP协议将成为连接AI模型和外部工具的重要桥梁。本项目为企业构建智能化应用提供了一个完整的参考实现，具有良好的扩展性和实用性。</p><hr><p><em>完整项目代码和文档：<a href=https://github.com/mingyu110/Cloud-Technical-Architect/tree/main/AI_MCP>https://github.com/mingyu110/Cloud-Technical-Architect/tree/main/AI_MCP</a></em></p><p><em>相关资源：</em></p><ul><li><em><a href=https://github.com/mingyu110/Cloud-Technical-Architect/blob/main/AI_MCP/AI_MCP_Debugging_Guide.md>AI_MCP_Debugging_Guide.md</a> - 详细调试指南</em></li><li><em><a href=https://github.com/mingyu110/Cloud-Technical-Architect/blob/main/AI_MCP/scripts/README.md>scripts/README.md</a> - 自动化脚本说明</em></li></ul></div><div class=post-tags><span class=tags-title>Tags:</span><div class=tags-list><a href=/tags/aws/ class=post-tag>Aws</a>
+<a href=/tags/lambda/ class=post-tag>Lambda</a>
+<a href=/tags/mcp/ class=post-tag>MC p</a>
+<a href=/tags/serverless/ class=post-tag>Serverless</a>
+<a href=/tags/ai/ class=post-tag>Ai</a>
+<a href=/tags/terraform/ class=post-tag>Terraform</a>
+<a href=/tags/fastapi/ class=post-tag>Fast API</a></div></div><div class=post-navigation><div class="post-nav-item post-nav-prev"><span class=post-nav-label>Previous</span>
+<a href=https://mingyu110.github.io/tech-blog-/posts/awsgcp%E9%98%BF%E9%87%8C%E4%BA%91%E7%9A%84iam%E7%AE%A1%E7%90%86%E7%9A%84%E6%80%BB%E7%BB%93%E5%AF%B9%E6%AF%94/>AWS、GCP、阿里云的IAM管理总结与对比</a></div><div class="post-nav-item post-nav-next"><span class=post-nav-label>Next</span>
+<a href=https://mingyu110.github.io/tech-blog-/posts/%E5%9F%BA%E4%BA%8E-aws-codepipeline-%E5%92%8C-codedeploy-%E7%BB%93%E5%90%88-github-%E5%AE%9E%E7%8E%B0-gitflow-%E7%9A%84%E6%B8%90%E8%BF%9B%E5%BC%8F%E5%8F%91%E5%B8%83/>基于 AWS CodePipeline 和 CodeDeploy 结合 GitHub 实现 Gitflow 的渐进式发布</a></div></div></article><style>.post{max-width:800px;margin:0 auto;padding:2rem 0}.post-header{margin-bottom:2rem}.post-title{font-size:2.5rem;line-height:1.2;margin-bottom:1rem;font-weight:800}.post-meta{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;font-size:.95rem;color:var(--text-color);opacity:.7;margin-bottom:1rem}.post-author{font-style:italic}.post-categories{display:flex;flex-wrap:wrap;gap:.5rem}.post-category{padding:.2rem .6rem;border-radius:4px;background-color:var(--primary-color);color:#fff;font-size:.75rem;font-weight:500}.post-featured-image{margin-bottom:2rem;border-radius:8px;overflow:hidden}.post-featured-image img{width:100%;height:auto;display:block}.post-content{font-size:1.1rem;line-height:1.7;margin-bottom:3rem}.post-content p{margin-bottom:1.5rem}.post-content h2{font-size:1.8rem;margin:2.5rem 0 1rem}.post-content h3{font-size:1.5rem;margin:2rem 0 1rem}.post-content ul,.post-content ol{margin-bottom:1.5rem;padding-left:1.5rem}.post-content li{margin-bottom:.5rem}.post-content blockquote{margin:2rem 0;padding:1rem 1.5rem;border-left:4px solid var(--primary-color);background-color:var(--secondary-background);font-style:italic}.post-content img{max-width:100%;height:auto;border-radius:4px;margin:1.5rem 0}.post-content pre{background-color:var(--code-background);padding:1rem;border-radius:4px;overflow-x:auto;margin:1.5rem 0}.post-content code{font-family:sfmono-regular,Consolas,liberation mono,Menlo,monospace;font-size:.9rem;padding:.1rem .3rem;background-color:var(--code-background);border-radius:3px}.post-content pre code{padding:0;background-color:transparent}.post-tags{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:3rem;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color);padding:1.5rem 0}.tags-title{font-weight:600;margin-right:.5rem}.tags-list{display:flex;flex-wrap:wrap;gap:.5rem}.post-tag{padding:.2rem .6rem;border-radius:4px;background-color:var(--secondary-background);border:1px solid var(--border-color);font-size:.8rem;transition:background-color .2s}.post-tag:hover{background-color:var(--border-color)}.post-navigation{display:flex;justify-content:space-between;margin:3rem 0}.post-nav-item{max-width:45%}.post-nav-label{display:block;font-weight:600;font-size:.9rem;margin-bottom:.5rem;opacity:.7}.post-nav-prev{text-align:left}.post-nav-next{text-align:right}.post-comments{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-color)}.comments-title{font-size:1.5rem;margin-bottom:1.5rem}.comments-placeholder{text-align:center;padding:2rem;background-color:var(--secondary-background);border-radius:8px;font-style:italic;opacity:.8}@media(max-width:768px){.post{padding:1rem}.post-title{font-size:2rem}.post-meta{flex-direction:column;align-items:flex-start;gap:.5rem}.post-content{font-size:1rem}.post-navigation{flex-direction:column;gap:1.5rem}.post-nav-item{max-width:100%}}</style></div></main><footer class=footer><div class=footer-container><div class=footer-content><div class=copyright>&copy; 2026 技术博客. All rights reserved.</div><div class=social-links></div></div></div></footer><script>const themeToggle=document.querySelector(".theme-toggle"),prefersDarkScheme=window.matchMedia("(prefers-color-scheme: dark)"),currentTheme=localStorage.getItem("theme")||(prefersDarkScheme.matches?"dark":"light");currentTheme==="dark"&&(document.body.setAttribute("data-theme","dark"),themeToggle.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'),themeToggle.addEventListener("click",()=>{let e="light",t='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';!document.body.getAttribute("data-theme")||document.body.getAttribute("data-theme")==="light"?(document.body.setAttribute("data-theme","dark"),e="dark",t='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'):document.body.removeAttribute("data-theme"),localStorage.setItem("theme",e),themeToggle.innerHTML=t});const menuToggle=document.querySelector(".menu-toggle"),navbar=document.querySelector(".navbar");menuToggle.addEventListener("click",()=>{navbar.classList.toggle("active")}),document.addEventListener("click",e=>{!navbar.contains(e.target)&&!menuToggle.contains(e.target)&&navbar.classList.contains("active")&&navbar.classList.remove("active")})</script></body></html>

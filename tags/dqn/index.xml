@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>DQN on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/dqn/</link><description>Recent content in DQN on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Thu, 31 Jul 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/dqn/index.xml" rel="self" type="application/rss+xml"/><item><title>强化学习核心概念与算法解析 (Reinforcement Learning Core Concepts and Algorithms Explained)</title><link>https://mingyu110.github.io/tech-blog-/posts/reinforcement-learning-concepts-and-algorithms/</link><pubDate>Thu, 31 Jul 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/reinforcement-learning-concepts-and-algorithms/</guid><description>强化学习核心概念与算法解析 摘要 大型语言模型（LLM）的卓越能力，很大程度上归功于强化学习技术的应用，特别是基于人类反馈的强化学习（Reinforcement Learning from Human Feedback, RLHF）。然而，在开源社区中，强化学习的普及度远不及监督微调（Supervised Fine-Tuning, SFT）。本文旨在系统性地梳理强化学习的基础理论、核心概念及关键算法，从基本定义出发，逐步深入到马尔可夫决策过程（MDP）、Q-Learning，最终延伸至深度Q网络（DQN），为理解并应用强化学习于语言模型领域奠定坚实的理论基础。
+本文是我个人的学习总结，如果存在错误或需要更新，可以随时通过我的联系方式与我联系指正。
+1. 引言 1.1 背景 近年来，基于人类反馈的强化学习（RLHF）已成为优化大型语言模型（LLM）性能的关键技术。尽管其效果显著，但与监督学习方法相比，强化学习在实践中的应用仍面临诸多挑战。主要原因有二：
+数据获取难度：RLHF 依赖于高质量的人类偏好数据，其收集与标注成本高昂。 技术壁垒：多数从业者对监督学习更为熟悉，而对强化学习的理论和实践相对陌生，这限制了其在项目中的应用。 本文旨在消除这一知识鸿沟，帮助读者建立对强化学习的系统性认知。
+1.2 本文目标 本文将通过循序渐进的方式，构建一个关于强化学习的完整知识框架：
+从强化学习的基本定义和核心思想入手。 深入探讨在语言模型微调中广泛应用的 RLHF 关键算法。 最终证明，强化学习的理念在实践中易于理解和应用。 注：在本文中，术语“智能体（agent）”将用于指代需要进行微调的语言模型。
+2. 机器学习范式对比 2.1 监督学习 (Supervised Learning) 在监督学习中，数据集由输入序列及其对应的“正确”标签组成。模型训练的目标是学习从输入到标签的映射关系。
+以文本分类为例，微调一个BERT模型以识别不当言论，其训练流程如下：
+从数据集中采样一个微批次（mini-batch）。 模型根据输入预测标签。 计算损失（如交叉熵损失）。 反向传播梯度。 更新模型权重。 2.2 自监督学习 (Self-Supervised Learning) 自监督学习的流程与监督学习相似，但其“标签”来源于数据自身，无需人工标注。例如，语言模型的预训练任务通常是预测序列中的下一个词元（token），而这个词元本身就存在于原始文本中。
+2.3 强化学习 (Reinforcement Learning, RL) 强化学习适用于需要模型通过与环境的交互和反馈进行学习的场景。与依赖固定标签的监督学习不同，强化学习通过“试错”机制进行训练：模型产生一个输出，接收一个代表反馈的“奖励（reward）”，并根据该奖励调整自身行为。
+在语言模型的 RLHF 场景中，模型生成一段文本，人类评估其质量并给出一个分数（即奖励）。模型利用这个分数来优化其策略，以期在未来生成更高质量的输出。
+3. 强化学习工作原理 3.1 为何需要强化学习？ 在 RLHF 中，人类的偏好评分是主观的，无法表示为一个可微分的数学函数。因此，我们不能像监督学习那样，直接通过人类的判断来计算梯度并反向传播。人类反馈在此充当了一个“黑箱”，我们只知其结果（得分），却无法直接利用它来指导模型的参数更新。
+注：在传统的强化学习环境中，环境本身是不可微分的。然而，在LLM的微调中，奖励通常由一个可微分的奖励模型（Reward Model）提供，这使得端到端的监督式训练成为可能（例如，直接偏好优化 DPO）。但若奖励直接由人类提供，则必须依赖强化学习方法。
+3.2 强化学习的有效性 强化学习的优势在于它能够处理不可微分的反馈信号。无论是来自人类、规则系统还是其他模型的评分，只要能提供一个标量奖励，我们就能训练语言模型。这使得我们可以根据期望的目标（如更有用、更安全、更诚实）来塑造模型的行为。
+4. 强化学习的核心构成 4.</description></item></channel></rss>

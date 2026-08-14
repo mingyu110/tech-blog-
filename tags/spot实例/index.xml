@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Spot实例 on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/spot%E5%AE%9E%E4%BE%8B/</link><description>Recent content in Spot实例 on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Thu, 08 May 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/spot%E5%AE%9E%E4%BE%8B/index.xml" rel="self" type="application/rss+xml"/><item><title>AWS EKS 节点选型与自动化弹性成本优化最佳实践</title><link>https://mingyu110.github.io/tech-blog-/posts/aws-eks-cost-optimization/</link><pubDate>Thu, 08 May 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/aws-eks-cost-optimization/</guid><description>AWS EKS 节点选型与自动化弹性成本优化最佳实践 随着越来越多的应用容器化以后开始部署在云服务商提供的托管Kubernetes集群，对于成本优化与性能平衡之间的考虑就变得很重要。基于自己的实践与调研，我总结了这篇文档，以AWS EKS为例，分享在云原生环境下的成本优化最佳实践。
+目录 EKS 节点类型选择策略 Karpenter 与 Spot 实例成本优化 业务场景实践案例 基础设施自动化与代码实践 Spot 实例优雅终止最佳实践 总结与建议 1. EKS 节点类型选择策略 在 AWS EKS 集群中，节点类型的选择对性能、成本和运维复杂度有直接影响。本节分析三种主要节点类型的适用场景。
+1.1 EC2 节点组 适用场景：
+需要对底层环境进行自定义（内核参数、AMI、驱动等） 长期稳定运行的工作负载 需要使用 GPU 或其他特殊硬件 有特定的合规或安全要求 优势：
+完全控制节点配置 支持 Reserved/Spot 实例降低成本 灵活的网络和存储配置 劣势：
+需要自行管理节点生命周期 运维复杂度较高 1.2 Fargate 适用场景：
+无需管理底层基础设施 工作负载波动大、短时任务多 多租户环境下需要强隔离 开发测试环境或试验性项目 优势：
+无需管理节点 按 Pod 计费，避免资源浪费 更好的安全隔离性 劣势：
+成本较高 功能限制（如无法使用特定存储驱动） 启动速度较慢 1.3 Karpenter 动态节点 适用场景：
+需要极致弹性和自动化的节点管理 多样化实例类型需求 对资源利用率和成本优化要求高 负载波动大的生产环境 优势：
+自动选择最优性价比实例 支持 Spot/On-Demand 混合调度 无需预定义节点组 更高的资源利用率 劣势：</description></item></channel></rss>

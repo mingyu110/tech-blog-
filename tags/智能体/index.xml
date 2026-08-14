@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>智能体 on 技术博客</title><link>https://mingyu110.github.io/tech-blog-/tags/%E6%99%BA%E8%83%BD%E4%BD%93/</link><description>Recent content in 智能体 on 技术博客</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Sat, 12 Jul 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://mingyu110.github.io/tech-blog-/tags/%E6%99%BA%E8%83%BD%E4%BD%93/index.xml" rel="self" type="application/rss+xml"/><item><title>公司级智能 Agent 优化路线图与技术实践</title><link>https://mingyu110.github.io/tech-blog-/posts/ai-agent%E4%BC%98%E5%8C%96%E6%8A%80%E6%9C%AF%E7%99%BD%E7%9A%AE%E4%B9%A6/</link><pubDate>Sat, 12 Jul 2025 00:00:00 +0000</pubDate><guid>https://mingyu110.github.io/tech-blog-/posts/ai-agent%E4%BC%98%E5%8C%96%E6%8A%80%E6%9C%AF%E7%99%BD%E7%9A%AE%E4%B9%A6/</guid><description>公司级智能 Agent 优化路线图与技术实践 **摘要 **
+近 两 年多来，我的工作中一直与 AI Agent 在企业的各业务场景落地有关系，在最近半年，也基于开源的智能体研发平台进行了二次开发用于企业内部的智能体开发平台，并且带领团队开发了多个智能体助力业务。因此本文是对企业要发展和优化智能体的总结。
+本文档旨在为提升公司智能 Agent 的性能、效果和成本效益，提供一个系统性的优化框架和可执行的技术方案。内容涵盖从底层推理性能优化到上层 Agent 架构设计的全链路实践，旨在帮助技术团队科学、高效地进行 Agent 优化，最终实现降本增效的业务目标。
+1. 引言 1.1. 背景：智能 Agent 的核心价值与挑战 智能 Agent 是连接大语言模型（LLM）与现实世界任务的桥梁，其核心价值在于能够自主理解、规划、并执行复杂任务。然而，将 Agent 从实验原型推向生产环境，面临着诸多挑战，主要体现在效果、性能和成本三个维度。
+1.2. 目标：我们要优化的核心指标 (KPIs) 一切优化工作都必须由清晰的指标来牵引。我们将 Agent 的核心指标归纳为三类：
+效果指标 (Effectiveness):
+任务成功率 (Task Success Rate): Agent 能否独立、正确地完成端到端任务流程。 结果准确率 (Result Accuracy): 任务完成后，最终产出的答案或执行的操作是否精确无误。 鲁棒性 (Robustness): Agent 在执行过程中需要多少次自我纠错或重试。 性能指标 (Performance):
+端到端延迟 (End-to-End Latency): 从用户发出指令到 Agent 完成任务的总耗时。 吞吐量 (Throughput): 系统在单位时间内能处理的任务数量或 Token 数量。 成本指标 (Cost):
+Token 效率: 完成单个任务平均消耗的 Prompt 和 Completion tokens 数量。 计算资源: 任务执行所占用的硬件资源（如 GPU 显存、算力）。 1.</description></item></channel></rss>
